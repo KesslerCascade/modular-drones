@@ -47,7 +47,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
         
         if (target.isRemoved() || !target.isAlive() || !target.isAttackable()) finishTask();
         
-        var shotFrom = this.owner.getEyePos().add(0, 1.2, 0);
+        var shotFrom = this.drone.currentPosition.add(0, 0.25, 0);
         var dist = shotFrom.distanceTo(target.getEyePos());
         if (dist > MAX_RANGE) finishTask();
         
