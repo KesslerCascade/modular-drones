@@ -24,6 +24,8 @@ import rearth.init.ItemContent;
 import rearth.init.NetworkContent;
 import rearth.util.Helpers;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Optional;
 
@@ -65,6 +67,44 @@ public class DroneController {
         
     }
     
+    /**
+     * While blocked, tries to slide the drone one movement step along whichever
+     * axis has the
+     * smallest delta to the target (but > 0.5), checking axes in ascending delta
+     * order.
+     */
+    private static void tryAxisSlideMovement(World world, DroneServerData serverData, float powerMultiplier) {
+        record AxisMove(double absDelta, Vec3d candidatePos) {
+        }
+
+        var current = serverData.currentPosition;
+        var target = serverData.targetPosition;
+        var vel = serverData.currentVelocity;
+        var scale = powerMultiplier / 20.0;
+
+        var axes = new ArrayList<AxisMove>();
+
+        var absDx = Math.abs(target.x - current.x);
+        var absDy = Math.abs(target.y - current.y);
+        var absDz = Math.abs(target.z - current.z);
+
+        if (absDx > 0.5 && Math.abs(vel.x) > 1e-4)
+            axes.add(new AxisMove(absDx, current.add(vel.x * scale, 0, 0)));
+        if (absDy > 0.5 && Math.abs(vel.y) > 1e-4)
+            axes.add(new AxisMove(absDy, current.add(0, vel.y * scale, 0)));
+        if (absDz > 0.5 && Math.abs(vel.z) > 1e-4)
+            axes.add(new AxisMove(absDz, current.add(0, 0, vel.z * scale)));
+
+        axes.sort(Comparator.comparingDouble(AxisMove::absDelta));
+
+        for (var axis : axes) {
+            if (Helpers.isLineAvailable(world, current, axis.candidatePos())) {
+                serverData.currentPosition = axis.candidatePos();
+                return;
+            }
+        }
+    }
+
     private static void updateDroneSensors(PlayerEntity player, DroneServerData serverData) {
         var currentPriority = serverData.getCurrentTask().getPriority();
         
@@ -135,6 +175,8 @@ public class DroneController {
             if (serverData.ghostWaitTime == 0) {
                 serverData.ghostTicks = 20;
             }
+            // while waiting, try to slide along the least-offset unobstructed axis
+            tryAxisSlideMovement(player.getWorld(), serverData, powerMultiplier);
         } else if (positionBlocked) {  // just hit an obstacle, start ghosting CD
             serverData.currentVelocity = Vec3d.ZERO;
             serverData.ghostWaitTime = 14;
