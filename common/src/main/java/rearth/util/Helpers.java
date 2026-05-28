@@ -5,6 +5,7 @@ import net.minecraft.block.ShapeContext;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Vec3i;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 
@@ -60,7 +61,7 @@ public class Helpers {
     public static boolean isLineAvailable(World world, Vec3d to, Vec3d from) {
         var context = new RaycastContext(from, to, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, ShapeContext.absent());
         var result = world.raycast(context);
-        return result == null || !result.isInsideBlock();
+        return result.getType() == HitResult.Type.MISS;
     }
     
     public static boolean isPositionAvailable(World world, Vec3d pos, Vec3d from) {
@@ -69,6 +70,6 @@ public class Helpers {
         
         var context = new RaycastContext(start, pos, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, ShapeContext.absent());
         var result = world.raycast(context);
-        return result == null || !result.isInsideBlock();
+        return result.getType() == HitResult.Type.MISS;
     }
 }
