@@ -28,7 +28,7 @@ public class BeamAttackBehaviour extends ArrowAttackBehaviour {
     }
     
     @Override
-    public void performAttack(double dist, Vec3d shotFrom) {
+    public boolean performAttack(double dist, Vec3d shotFrom) {
         var world = this.owner.getWorld();
         
         this.target.damage(new DamageSource(world.getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(DamageTypes.PLAYER_ATTACK)), ATTACK_DAMAGE);
@@ -38,6 +38,8 @@ public class BeamAttackBehaviour extends ArrowAttackBehaviour {
         if (world instanceof ServerWorld serverWorld) {
             spawnBeamLine(this.drone.currentPosition, target.getEyePos(), serverWorld);
         }
+        
+        return true;
     }
     
     private void spawnBeamLine(Vec3d from, Vec3d to, ServerWorld world) {

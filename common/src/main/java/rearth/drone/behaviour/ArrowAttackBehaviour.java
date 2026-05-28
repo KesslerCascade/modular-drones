@@ -34,7 +34,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
     public final PlayerEntity owner;
     public final DroneServerData drone;
     
-    private int attackCooldown = 0;
+    private long nextFireTime = 0;
     
     public ArrowAttackBehaviour(LivingEntity target, PlayerEntity owner, DroneServerData drone) {
         super(drone, owner);
@@ -54,19 +54,15 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
         var dist = shotFrom.distanceTo(target.getEyePos());
         if (dist > MAX_RANGE) finishTask();
         
-        if (attackCooldown <= 0) {
-            
-            attackCooldown = getAttackCooldown();
-            
-            performAttack(dist, shotFrom);
-            
-        } else {
-            attackCooldown--;
+        if (owner.getWorld().getTime() >= nextFireTime) {
+            if (performAttack(dist, shotFrom)) {
+                nextFireTime = owner.getWorld().getTime() + getAttackCooldown();
+            }
         }
         
     }
     
-    public void performAttack(double dist, Vec3d shotFrom) {
+    public boolean performAttack(double dist, Vec3d shotFrom) {
         
         var world = owner.getWorld();
         var targetPos = target.getEyePos().add(0, dist / 10f, 0); // adjust target slightly up for longer distances to
@@ -80,7 +76,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
                 RaycastContext.FluidHandling.NONE, ShapeContext.absent());
         if (world.raycast(losContextActual).getType() != HitResult.Type.MISS
                 || world.raycast(losContextAdjusted).getType() != HitResult.Type.MISS)
-            return;
+            return false;
 
         // abort if owner is in the line of fire (check both aim direction and landing
         // point to bracket the arc)
@@ -89,7 +85,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
         var landDir = target.getEyePos().subtract(shotFrom).normalize();
         if (ownerBox.raycast(shotFrom, shotFrom.add(aimDir.multiply(dist + 5))).isPresent()
                 || ownerBox.raycast(shotFrom, shotFrom.add(landDir.multiply(dist + 5))).isPresent())
-            return;
+            return false;
 
         // shoot arrow
         var stack = new ItemStack(Items.ARROW);
@@ -106,6 +102,8 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
             var particleStart = drone.currentPosition.add(forward.multiply(0.3f));
             serverWorld.spawnParticles(ParticleTypes.SMALL_GUST, particleStart.x, particleStart.y, particleStart.z, 1, forward.x, forward.y, forward.z, 0.2f);
         }
+
+        return true;
     }
     
     public int getAttackCooldown() {
