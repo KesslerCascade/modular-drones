@@ -38,7 +38,9 @@ public class DroneRenderer {
             var movementData = DronesClient.CURRENT_DATA.get(droneData.getDroneId());
             if (movementData == null) return;
             
-            var tickDelta = MinecraftClient.getInstance().getRenderTickCounter().getTickDelta(false);
+            // Scale interpolation factor based on frame time
+            var frameTimeTicks = MinecraftClient.getInstance().getRenderTickCounter().getLastFrameDuration();
+            var ftScale = frameTimeTicks * 3.0;
             
             var targetScale = 0.15f * droneData.getRenderScale();
             
@@ -56,7 +58,8 @@ public class DroneRenderer {
                 lastRot = new Vec3d(lastRot.x, adjustedY, lastRot.z);
             }
             
-            var deltaDronePos = Helpers.lerp(lastPos, newPos, 0.1f);
+            var posAlpha = (float) (1.0 - Math.pow(0.9, ftScale));
+            var deltaDronePos = Helpers.lerp(lastPos, newPos, posAlpha);
             lastPositions.put(dronePlayer, deltaDronePos);
 
             var rotDelta = newRot.subtract(lastRot);
@@ -65,7 +68,8 @@ public class DroneRenderer {
             var maxRotFactor = 0.15f;
             var aggressiveThreshold = 30.0f;
             var aggressiveness = Math.min(1.0f, rotDist / aggressiveThreshold);
-            var rotFactor = minRotFactor + aggressiveness * (maxRotFactor - minRotFactor);
+            var baseRotFactor = minRotFactor + aggressiveness * (maxRotFactor - minRotFactor);
+            var rotFactor = (float) (1.0 - Math.pow(1.0 - baseRotFactor, ftScale));
             var deltaDroneRot = Helpers.lerp(lastRot, newRot, rotFactor);
             lastRotations.put(dronePlayer, deltaDroneRot);
             
