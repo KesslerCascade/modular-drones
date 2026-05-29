@@ -30,6 +30,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
     
     private static final int MAX_RANGE = 25;
     private static final int MAX_CONSECUTIVE_FAILED_ATTACKS = 14;
+    private static final double RECOIL_STRENGTH = 1.5;
 
     private int consecutiveFailedAttacks = 0;
 
@@ -112,7 +113,11 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
         var arrowEntity = new ArrowEntity(world, shotFrom.x, shotFrom.y, shotFrom.z, stack, null);
         arrowEntity.setVelocity(initialVelocity);
         world.spawnEntity(arrowEntity);
-        
+
+        // recoil: kick the drone backward opposite to the shot direction
+        var recoilDir = shotFrom.subtract(targetPos).normalize();
+        drone.recoilVelocity = drone.recoilVelocity.add(recoilDir.multiply(RECOIL_STRENGTH));
+
         // particle
         if (owner.getWorld() instanceof ServerWorld serverWorld) {
             var forward = target.getEyePos().subtract(drone.currentPosition).normalize();

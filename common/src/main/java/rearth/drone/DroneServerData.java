@@ -16,6 +16,7 @@ public class DroneServerData {
     // not synced
     public @NotNull Vec3d targetPosition = Vec3d.ZERO;
     public @NotNull Vec3d currentVelocity = Vec3d.ZERO;
+    public @NotNull Vec3d recoilVelocity = Vec3d.ZERO;
     private @Nullable DroneBehaviour currentTask = null;
     public int ghostTicks = 0;
     public int ghostWaitTime = 0;

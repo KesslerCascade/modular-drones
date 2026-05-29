@@ -190,6 +190,16 @@ public class DroneController {
             serverData.ghostWaitTime = 0;
         }
         
+        // apply recoil: a forced impulse set by attacks, decayed each tick, bypasses
+        // banking
+        if (serverData.recoilVelocity.lengthSquared() > 0.0001) {
+            serverData.currentPosition = serverData.currentPosition
+                    .add(serverData.recoilVelocity.multiply(powerMultiplier / 20.0));
+            serverData.recoilVelocity = serverData.recoilVelocity.multiply(0.75);
+            if (serverData.recoilVelocity.lengthSquared() < 0.0001)
+                serverData.recoilVelocity = Vec3d.ZERO;
+        }
+
         // tp to player if too far away
         var playerDist = serverData.currentPosition.distanceTo(player.getEyePos());
         if (playerDist > SNAP_RANGE) {
