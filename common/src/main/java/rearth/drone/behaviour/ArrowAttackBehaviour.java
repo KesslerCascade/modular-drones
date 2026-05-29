@@ -111,7 +111,15 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
     public void finishTask() {
         drone.setCurrentTask(new PlayerSwarmBehaviour(drone, owner));
     }
-    
+
+    @Override
+    public Vec3d getDesiredPosition() {
+        if (target == null || target.isRemoved() || !target.isAlive())
+            return null;
+        var direction = target.getEyePos().subtract(owner.getEyePos()).normalize();
+        return owner.getEyePos().add(0, 0.5f, 0).add(direction.multiply(0.9f));
+    }
+
     @Override
     public float getCurrentYaw() {
         return Helpers.calculateYaw(drone.currentPosition, target.getEyePos());
