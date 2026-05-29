@@ -54,7 +54,11 @@ public class DroneController {
         if (serverData.droneData.isGlowing()) {
             DroneLight.updateDroneLight(serverData, player.getWorld());
         }
-        
+
+        if (serverData.actionCooldown > 0) {
+            serverData.actionCooldown--;
+        }
+
         updateDroneSensors(player, serverData);
         serverData.getCurrentTask().tick();
         updateDroneMovement(player, serverData);

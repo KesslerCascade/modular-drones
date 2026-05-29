@@ -33,9 +33,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
     public final LivingEntity target;
     public final PlayerEntity owner;
     public final DroneServerData drone;
-    
-    private long nextFireTime = 0;
-    
+
     public ArrowAttackBehaviour(LivingEntity target, PlayerEntity owner, DroneServerData drone) {
         super(drone, owner);
         this.target = target;
@@ -54,9 +52,9 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
         var dist = shotFrom.distanceTo(target.getEyePos());
         if (dist > MAX_RANGE) finishTask();
         
-        if (owner.getWorld().getTime() >= nextFireTime) {
+        if (drone.actionCooldown == 0) {
             if (performAttack(dist, shotFrom)) {
-                nextFireTime = owner.getWorld().getTime() + getAttackCooldown();
+                drone.actionCooldown = getAttackCooldown();
             }
         }
         

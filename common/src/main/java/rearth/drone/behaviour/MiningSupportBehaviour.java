@@ -32,7 +32,6 @@ public class MiningSupportBehaviour implements DroneBehaviour {
     private final BlockState startState;
     
     private SupportPhase phase;
-    private int waitTicks;
     
     public MiningSupportBehaviour(BlockPos target, PlayerEntity owner, DroneServerData drone) {
         this.target = target;
@@ -93,8 +92,7 @@ public class MiningSupportBehaviour implements DroneBehaviour {
                 }
             }
             case WAITING -> {
-                waitTicks--;
-                if (waitTicks <= 0)
+                if (drone.actionCooldown == 0)
                     finishTask();
             }
         }
@@ -103,7 +101,7 @@ public class MiningSupportBehaviour implements DroneBehaviour {
     
     private void finishMining() {
         phase = SupportPhase.WAITING;
-        waitTicks = WAIT_TIME;
+        drone.actionCooldown = WAIT_TIME;
     }
     
     @Override
