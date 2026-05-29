@@ -67,7 +67,7 @@ public class BeamAttackBehaviour extends ArrowAttackBehaviour {
     public int getAttackCooldown() {
         return 30;
     }
-    
+
     public static class BeamAttackSensor extends ArrowAttackSensor {
         
         @Override
@@ -80,6 +80,11 @@ public class BeamAttackBehaviour extends ArrowAttackBehaviour {
             return super.getTargetingRange() + 8;
         }
         
+        @Override
+        public boolean shootsProjectile() {
+            return false;
+        }
+
         @Override
         public void onTargetFound(DroneServerData drone, PlayerEntity player, LivingEntity target) {
             drone.setCurrentTask(new BeamAttackBehaviour(target, player, drone));

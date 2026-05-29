@@ -111,7 +111,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
     public int getAttackCooldown() {
         return 24;
     }
-    
+
     public void finishTask() {
         drone.setCurrentTask(new PlayerSwarmBehaviour(drone, owner));
     }
@@ -144,6 +144,8 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
             targets.sort(Comparator.comparingDouble((entity) -> entity.squaredDistanceTo(playerHead)));
             targets = targets.stream()
                     .filter(target -> target.isAlive() && !target.isRemoved() && target instanceof Monster)
+                    .filter(target -> !shootsProjectile()
+                            || target.getType() != net.minecraft.entity.EntityType.ENDERMAN)
                     .filter(target -> {
                         var losContext = new RaycastContext(playerHead, target.getEyePos(),
                                 RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE,
@@ -164,6 +166,10 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
             return 16;
         }
         
+        public boolean shootsProjectile() {
+            return true;
+        }
+
         public void onTargetFound(DroneServerData drone, PlayerEntity player, LivingEntity target) {
             drone.setCurrentTask(new ArrowAttackBehaviour(target, player, drone));
         }
