@@ -33,7 +33,6 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
     private final DroneServerData drone;
     
     private AttackPhase phase;
-    private int attackCooldown = 0;
     
     public MeleeAttackBehaviour(LivingEntity target, PlayerEntity owner, DroneServerData drone) {
         this.target = target;
@@ -54,7 +53,6 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
                 
                 var dist = drone.currentPosition.distanceTo(target.getEyePos());
                 var playerDist = drone.currentPosition.distanceTo(owner.getEyePos());
-                attackCooldown = 0;
                 
                 if (dist > MAX_RANGE || playerDist > MAX_RANGE) {
                     phase = AttackPhase.MOVING_HOME;
@@ -79,20 +77,17 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
                 }
                 
                 drone.targetPosition = target.getEyePos();
-                if (attackCooldown < 0) {
+                if (drone.actionCooldown == 0) {
                     // do attack
                     var damage = 2; // todo
                     target.damage(new DamageSource(owner.getWorld().getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(DamageTypes.PLAYER_ATTACK), owner), damage);
-                    attackCooldown = ATTACK_COOLDOWN;
+                    drone.actionCooldown = ATTACK_COOLDOWN;
                     
                     if (owner.getWorld() instanceof ServerWorld serverWorld) {
                         var middle = drone.currentPosition.add(target.getEyePos()).multiply(0.5f);
                         var forward = target.getEyePos().subtract(drone.currentPosition).normalize();
                         serverWorld.spawnParticles(ParticleTypes.SWEEP_ATTACK, middle.x, middle.y, middle.z, 1, forward.x, forward.y, forward.z, 0.2f);
                     }
-                    
-                } else {
-                    attackCooldown--;
                 }
                 
             }
@@ -118,7 +113,7 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
             return Helpers.calculateYaw(drone.currentPosition, owner.getEyePos());
         
         if (phase == AttackPhase.ATTACKING) {
-            var progress = attackCooldown / (float) ATTACK_COOLDOWN;
+            var progress = drone.actionCooldown / (float) ATTACK_COOLDOWN;
             return Helpers.calculateYaw(drone.currentPosition, target.getEyePos()) + progress * 90;
         }
         

@@ -19,6 +19,7 @@ public class DroneServerData {
     private @Nullable DroneBehaviour currentTask = null;
     public int ghostTicks = 0;
     public int ghostWaitTime = 0;
+    public int actionCooldown = 0;
     
     public final @NotNull DroneData droneData;
     
