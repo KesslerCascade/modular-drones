@@ -42,6 +42,11 @@ public class PlayerSwarmBehaviour implements DroneBehaviour {
         return 1;
     }
     
+    // override to provide a preferred position that will be tried before the overhead noise positions
+    public Vec3d getDesiredPosition() {
+        return null;
+    }
+
     // circles overhead in a random manner, with slight Y variations.
     // falls back to a fixed overhead then a behind-player position if the
     // noise-driven spot is inside a block.
@@ -49,6 +54,10 @@ public class PlayerSwarmBehaviour implements DroneBehaviour {
         var world = owner.getWorld();
         var playerHead = owner.getEyePos();
         var overheadCenter = playerHead.add(0, 0.5f, 0);
+
+        var desired = getDesiredPosition();
+        if (desired != null && isPositionClearRadius(desired, 0.5))
+            return desired;
         
         var playerYaw = Math.toRadians(owner.headYaw - 90);
         var playerBackDir = new Vec3d(Math.cos(playerYaw), 0, Math.sin(playerYaw)).normalize();
