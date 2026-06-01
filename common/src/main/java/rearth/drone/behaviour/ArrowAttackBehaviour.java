@@ -172,8 +172,8 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
             targets.sort(Comparator.comparingDouble((entity) -> entity.squaredDistanceTo(playerHead)));
             targets = targets.stream()
                     .filter(target -> target.isAlive() && !target.isRemoved() && target instanceof Monster)
-                    .filter(target -> !shootsProjectile()
-                            || target.getType() != net.minecraft.entity.EntityType.ENDERMAN)
+                    .filter(target -> !(target instanceof net.minecraft.entity.mob.EndermanEntity enderman)
+                            || (!shootsProjectile() && enderman.isAngry()))
                     .filter(target -> {
                         var losContext = new RaycastContext(playerHead, target.getEyePos(),
                                 RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE,

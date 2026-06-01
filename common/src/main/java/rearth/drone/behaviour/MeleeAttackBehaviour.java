@@ -156,7 +156,10 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
             
             var targets = world.getEntitiesByClass(LivingEntity.class, new Box(playerHead.x - entityRange, playerHead.y - entityRange, playerHead.z - entityRange, playerHead.x + entityRange, playerHead.y + entityRange, playerHead.z + entityRange), EntityPredicates.VALID_LIVING_ENTITY.and(EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
             targets.sort(Comparator.comparingDouble((entity) -> entity.squaredDistanceTo(playerHead)));
-            targets = targets.stream().filter(target -> target.isAlive() && !target.isRemoved() && target instanceof Monster).toList();
+            targets = targets.stream()
+                    .filter(target -> target.isAlive() && !target.isRemoved() && target instanceof Monster)
+                    .filter(target -> !(target instanceof net.minecraft.entity.mob.EndermanEntity enderman) || enderman.isAngry())
+                    .toList();
             
             if (!targets.isEmpty()) {
                 drone.setCurrentTask(new MeleeAttackBehaviour(targets.getFirst(), player, drone));
