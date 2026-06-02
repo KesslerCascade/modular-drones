@@ -21,6 +21,7 @@ public class DroneServerData {
     public int ghostTicks = 0;
     public int ghostWaitTime = 0;
     public int actionCooldown = 0;
+    public int currentTaskAge = 0;
     
     public final @NotNull DroneData droneData;
     
@@ -40,6 +41,7 @@ public class DroneServerData {
             this.currentTask.onStopped();
         }
         this.currentTask = currentTask;
+        this.currentTaskAge = 0;
     }
     
 }

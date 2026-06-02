@@ -15,6 +15,7 @@ import rearth.init.TagContent;
 import rearth.util.Helpers;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -169,7 +170,8 @@ public class DroneData {
             sensors.add(new MeleeAttackBehaviour.MeleeAttackSensor());
         if (functions.contains(DroneBehaviour.BlockFunctions.PICKUP))
             sensors.add(new PickupBehaviour.PickupSensor());
-        
+
+        sensors.sort(Comparator.comparingInt(DroneSensor::getPriority).reversed());
         return sensors;
     }
     

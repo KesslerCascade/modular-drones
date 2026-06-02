@@ -22,9 +22,10 @@ import java.util.concurrent.CompletableFuture;
 public class BeamAttackBehaviour extends ArrowAttackBehaviour {
     
     private static final int ATTACK_DAMAGE = 10;
-    
+    public static final int BEAM_PRIORITY = 37;
+
     public BeamAttackBehaviour(LivingEntity target, PlayerEntity owner, DroneServerData drone) {
-        super(target, owner, drone);
+        super(target, owner, drone, BEAM_PRIORITY);
     }
     
     @Override
@@ -74,21 +75,21 @@ public class BeamAttackBehaviour extends ArrowAttackBehaviour {
         
         @Override
         public int getPriority() {
-            return super.getPriority() + 2;
+            return BEAM_PRIORITY;
         }
-        
+
         @Override
         public int getTargetingRange() {
             return super.getTargetingRange() + 8;
         }
-        
+
         @Override
         public boolean shootsProjectile() {
             return false;
         }
 
         @Override
-        public void onTargetFound(DroneServerData drone, PlayerEntity player, LivingEntity target) {
+        public void onTargetFound(DroneServerData drone, PlayerEntity player, LivingEntity target, int priority) {
             drone.setCurrentTask(new BeamAttackBehaviour(target, player, drone));
         }
     }

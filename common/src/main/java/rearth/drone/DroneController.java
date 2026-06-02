@@ -33,6 +33,7 @@ public class DroneController {
     
     // tp the drone to player if it's too far away
     public static final int SNAP_RANGE = 30;
+    private static final int MIN_INTERRUPT_TICKS = 40;
     
     private final static HashMap<Integer, DroneServerData> WORK_DATA = new HashMap<>();
     
@@ -59,6 +60,7 @@ public class DroneController {
             serverData.actionCooldown--;
         }
 
+        serverData.currentTaskAge++;
         updateDroneSensors(player, serverData);
         serverData.getCurrentTask().tick();
         updateDroneMovement(player, serverData);
@@ -110,18 +112,20 @@ public class DroneController {
     }
 
     private static void updateDroneSensors(PlayerEntity player, DroneServerData serverData) {
+        if (serverData.currentTaskAge < MIN_INTERRUPT_TICKS) return;
+
         var currentPriority = serverData.getCurrentTask().getPriority();
-        
+
         // if a sensor matches, stop the search
         for (var sensor : serverData.droneData.enabledSensors) {
             if (currentPriority >= sensor.getPriority()) break;
-            
+
             if (sensor.sense(serverData, player)) {
                 break;
             }
-            
+
         }
-        
+
     }
     
     private static void updateDroneMovement(PlayerEntity player, DroneServerData serverData) {
@@ -266,14 +270,18 @@ public class DroneController {
     }
     
     private static void issueAttackCommend(PlayerEntity player, DroneServerData serverData, LivingEntity livingEntity) {
-        
+        var currentTask = serverData.getCurrentTask();
+
         if (serverData.droneData.installed.contains(DroneBehaviour.BlockFunctions.BEAM)) {
+            if (currentTask != null && currentTask.getPriority() >= BeamAttackBehaviour.BEAM_PRIORITY) return;
             serverData.setCurrentTask(new BeamAttackBehaviour(livingEntity, player, serverData));
             return;
         }
-        
-        if (serverData.droneData.installed.contains(DroneBehaviour.BlockFunctions.MELEE_ATTACK))
-            serverData.setCurrentTask(new MeleeAttackBehaviour(livingEntity, player, serverData));
+
+        if (serverData.droneData.installed.contains(DroneBehaviour.BlockFunctions.MELEE_ATTACK)) {
+            if (currentTask != null && currentTask.getPriority() >= MeleeAttackBehaviour.PLAYER_INITIATED_PRIORITY) return;
+            serverData.setCurrentTask(new MeleeAttackBehaviour(livingEntity, player, serverData, MeleeAttackBehaviour.PLAYER_INITIATED_PRIORITY));
+        }
     }
     
     public static EventResult onPlayerAttackEntityEvent(PlayerEntity player, World world, Entity entity, Hand hand, @Nullable EntityHitResult entityHitResult) {
