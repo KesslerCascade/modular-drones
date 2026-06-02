@@ -47,7 +47,6 @@ public class DroneData {
         var thrust = 0f;
         var abilities = new ArrayList<DroneBehaviour.BlockFunctions>();
         abilities.add(DroneBehaviour.BlockFunctions.FLIGHT);
-        var light = false;
         
         var droneFrame = new HashMap<Vec3i, BlockState>();
         blocks.forEach(block -> droneFrame.put(block.localPos(), block.state()));
@@ -60,7 +59,8 @@ public class DroneData {
         for (var recordedBlock : blocks) {
             
             var state = recordedBlock.state();
-            weight += state.getBlock().getHardness();
+            if (!state.isIn(TagContent.THRUSTER_BLOCKS) && !state.isAir() && state.blocksMovement())
+                weight += 2;
             
             thrust += getThrust(recordedBlock, droneFrame);
             
@@ -103,7 +103,7 @@ public class DroneData {
         var sizeZ = maxZ - minZ + 1;
         this.size = Math.max(sizeX, sizeZ);
         
-        var thrusterRatio = thrust / weight;
+        var thrusterRatio = thrust / Math.max(weight, 1);
         
         if (thrusterRatio < 1)
             thrusterRatio = (float) Math.sqrt(thrusterRatio);
