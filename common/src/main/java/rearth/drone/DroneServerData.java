@@ -1,11 +1,14 @@
 package rearth.drone;
 
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import rearth.drone.behaviour.DroneBehaviour;
 import rearth.drone.behaviour.PlayerSwarmBehaviour;
+
+import java.util.UUID;
 
 public class DroneServerData {
     
@@ -23,6 +26,12 @@ public class DroneServerData {
     public int actionCooldown = 0;
     public int currentTaskAge = 0;
     
+    // pickup inventory
+    public @NotNull ItemStack carriedItem = ItemStack.EMPTY;
+    public boolean carriedItemDirty = false;
+    public @Nullable UUID excludedItem = null;
+    public int excludedItemTimeout = 0;
+
     public final @NotNull DroneData droneData;
     
     public DroneServerData(DroneData droneData, ServerPlayerEntity player) {

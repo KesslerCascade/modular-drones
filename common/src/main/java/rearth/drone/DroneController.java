@@ -7,6 +7,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -58,6 +59,13 @@ public class DroneController {
 
         if (serverData.actionCooldown > 0) {
             serverData.actionCooldown--;
+        }
+
+        if (serverData.excludedItemTimeout > 0) {
+            serverData.excludedItemTimeout--;
+            if (serverData.excludedItemTimeout == 0) {
+                serverData.excludedItem = null;
+            }
         }
 
         serverData.currentTaskAge++;
@@ -217,39 +225,48 @@ public class DroneController {
     
     public static Optional<DroneServerData> getPlayerServerData(PlayerEntity playerEntity) {
         
-        var droneCandidate = getDroneOfPlayer(playerEntity);
-        if (playerEntity instanceof ServerPlayerEntity serverPlayer && droneCandidate.isPresent()) {
-            var serverData = WORK_DATA.computeIfAbsent(droneCandidate.get().getDroneId(), droneId -> new DroneServerData(droneCandidate.get(), serverPlayer));
-            return Optional.of(serverData);
-        }
-        
-        return Optional.empty();
+        if (!(playerEntity instanceof ServerPlayerEntity serverPlayer))
+            return Optional.empty();
+        var droneStack = findDroneItemStack(playerEntity);
+        if (droneStack.isEmpty())
+            return Optional.empty();
+        var droneData = droneStack.get().get(ComponentContent.DRONE_DATA_TYPE.get());
+        if (droneData == null)
+            return Optional.empty();
+
+        var serverData = WORK_DATA.computeIfAbsent(droneData.getDroneId(), droneId -> {
+            var newData = new DroneServerData(droneData, serverPlayer);
+            var saved = droneStack.get().get(ComponentContent.CARRIED_ITEM_TYPE.get());
+            if (saved != null && !saved.isEmpty()) {
+                newData.carriedItem = saved.copy();
+            }
+            return newData;
+        });
+        return Optional.of(serverData);
     }
-    
-    public static Optional<DroneData> getDroneOfPlayer(PlayerEntity playerEntity) {
-        
-        var droneCandidate = playerEntity.getEquippedStack(EquipmentSlot.HEAD);
-        if (droneCandidate.isOf(ItemContent.POCKET_DRONE.get()) && droneCandidate.contains(ComponentContent.DRONE_DATA_TYPE.get())) {
-            var droneData = droneCandidate.get(ComponentContent.DRONE_DATA_TYPE.get());
-            if (droneData == null) return Optional.empty();
-            
-            return Optional.of(droneData);
-            
+
+    /**
+     * Finds the live ItemStack reference for the drone item worn by the given
+     * player, checking HEAD slot, accessories:drone, and accessories:head cosmetic.
+     */
+    public static Optional<ItemStack> findDroneItemStack(PlayerEntity playerEntity) {
+        var headStack = playerEntity.getEquippedStack(EquipmentSlot.HEAD);
+        if (headStack.isOf(ItemContent.POCKET_DRONE.get())
+                && headStack.contains(ComponentContent.DRONE_DATA_TYPE.get())) {
+            return Optional.of(headStack);
         }
-        
-        if (Platform.isModLoaded("accessories") && playerEntity.accessoriesCapability() != null && playerEntity.accessoriesCapability().getContainers() != null) {
+
+        if (Platform.isModLoaded("accessories") && playerEntity.accessoriesCapability() != null
+                && playerEntity.accessoriesCapability().getContainers() != null) {
             var containers = playerEntity.accessoriesCapability().getContainers();
-            
+
             var droneSlot = containers.get("drone");
             if (droneSlot != null) {
                 for (var pair : droneSlot.getAccessories()) {
                     var candidate = pair.getSecond();
                     if (candidate.isOf(ItemContent.POCKET_DRONE.get())
                             && candidate.contains(ComponentContent.DRONE_DATA_TYPE.get())) {
-                        var droneData = candidate.get(ComponentContent.DRONE_DATA_TYPE.get());
-                        if (droneData == null)
-                            return Optional.empty();
-                        return Optional.of(droneData);
+                        return Optional.of(candidate);
                     }
                 }
             }
@@ -260,16 +277,33 @@ public class DroneController {
                     var candidate = pair.getSecond();
                     if (candidate.isOf(ItemContent.POCKET_DRONE.get())
                             && candidate.contains(ComponentContent.DRONE_DATA_TYPE.get())) {
-                        var droneData = candidate.get(ComponentContent.DRONE_DATA_TYPE.get());
-                        if (droneData == null)
-                            return Optional.empty();
-                        return Optional.of(droneData);
+                        return Optional.of(candidate);
                     }
                 }
             }
         }
-        
+
         return Optional.empty();
+    }
+
+    /**
+     * Persists the drone's carried item into the PocketDrone ItemStack's component
+     * data, so it survives server restarts. Covers HEAD slot and Accessories slots.
+     */
+    public static void saveCarriedItemToStack(PlayerEntity owner, ItemStack carriedItem) {
+        var droneStack = findDroneItemStack(owner);
+        droneStack.ifPresent(stack -> {
+            if (carriedItem.isEmpty()) {
+                stack.remove(ComponentContent.CARRIED_ITEM_TYPE.get());
+            } else {
+                stack.set(ComponentContent.CARRIED_ITEM_TYPE.get(), carriedItem.copy());
+            }
+        });
+    }
+
+    public static Optional<DroneData> getDroneOfPlayer(PlayerEntity playerEntity) {
+        return findDroneItemStack(playerEntity)
+                .map(stack -> stack.get(ComponentContent.DRONE_DATA_TYPE.get()));
     }
     
     private static void issueAttackCommend(PlayerEntity player, DroneServerData serverData, LivingEntity livingEntity) {
