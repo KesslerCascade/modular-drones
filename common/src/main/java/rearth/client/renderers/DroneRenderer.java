@@ -6,8 +6,10 @@ import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.WorldRenderer;
+import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
@@ -111,6 +113,26 @@ public class DroneRenderer {
                     }
                 }
                 
+                matrices.pop();
+            }
+            
+            // render carried item below drone center
+            var carriedItem = DronesClient.CARRIED_ITEMS.get(droneData.getDroneId());
+            if (carriedItem != null && !carriedItem.isEmpty()) {
+                matrices.push();
+                matrices.translate(0, -0.15, 0);
+                matrices.scale(0.3f, 0.3f, 0.3f);
+                var itemLight = getMaxLight(BlockPos.ofFloored(movementData.position()), world);
+                MinecraftClient.getInstance().getItemRenderer().renderItem(
+                  carriedItem,
+                  ModelTransformationMode.GROUND,
+                  itemLight,
+                  OverlayTexture.DEFAULT_UV,
+                  matrices,
+                  vertexConsumers,
+                  world,
+                  0
+                );
                 matrices.pop();
             }
             
