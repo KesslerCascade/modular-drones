@@ -77,6 +77,11 @@ public class DroneController {
         if (player.getWorld() instanceof ServerWorld serverWorld) {
             var nearbyPlayers = serverWorld.getPlayers(candidate -> candidate.getPos().squaredDistanceTo(player.getPos()) < 10_000);
             NetworkManager.sendToPlayers(nearbyPlayers, new NetworkContent.DroneMoveSyncPacket(serverData.currentPosition, serverData.currentRotation, serverData.droneData.getDroneId()));
+            if (serverData.carriedItemDirty) {
+                NetworkManager.sendToPlayers(nearbyPlayers, new NetworkContent.DroneCarriedItemPacket(
+                        serverData.droneData.getDroneId(), serverData.carriedItem.copy()));
+                serverData.carriedItemDirty = false;
+            }
         }
         
     }
