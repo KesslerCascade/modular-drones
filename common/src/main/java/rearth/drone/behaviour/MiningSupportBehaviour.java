@@ -127,7 +127,7 @@ public class MiningSupportBehaviour implements DroneBehaviour {
     }
     
     public void finishTask() {
-        drone.setCurrentTask(new PlayerSwarmBehaviour(drone, owner));
+        drone.setIdle(owner, drone);
     }
     
     @Override

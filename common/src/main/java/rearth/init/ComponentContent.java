@@ -19,4 +19,10 @@ public class ComponentContent {
                                                                                                               .build()
     );
     
+    public static final RegistrySupplier<ComponentType<CarriedItemComponent>> CARRIED_ITEM_TYPE = COMPONENT_TYPES
+            .register("carried_item", () -> ComponentType.<CarriedItemComponent>builder()
+                    .codec(CarriedItemComponent.CODEC)
+                    .packetCodec(CarriedItemComponent.PACKET_CODEC)
+                    .build());
+
 }

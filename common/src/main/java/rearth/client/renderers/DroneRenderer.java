@@ -6,8 +6,10 @@ import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.WorldRenderer;
+import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
@@ -63,13 +65,16 @@ public class DroneRenderer {
             lastPositions.put(dronePlayer, deltaDronePos);
 
             var rotDelta = newRot.subtract(lastRot);
-            var rotDist = (float) rotDelta.length();
-            var minRotFactor = 0.05f;
-            var maxRotFactor = 0.15f;
-            var aggressiveThreshold = 30.0f;
-            var aggressiveness = Math.min(1.0f, rotDist / aggressiveThreshold);
-            var baseRotFactor = minRotFactor + aggressiveness * (maxRotFactor - minRotFactor);
-            var rotFactor = (float) (1.0 - Math.pow(1.0 - baseRotFactor, ftScale));
+            var rotDist = (float) Math.max(Math.abs(rotDelta.x), Math.max(Math.abs(rotDelta.y), Math.abs(rotDelta.z)));
+            // Ease factor scales linearly from 0.1 at 15 degrees to 0.15 at 45 degrees
+            var rampT = Math.min(1.0f, Math.max(0.0f, (rotDist - 15.0f) / (45.0f - 15.0f)));
+            var baseFactor = 0.05f + rampT * 0.1f;
+            var easeStep = (float) (1.0 - Math.pow(1.0 - baseFactor, ftScale));
+            // Cap at a fixed angular velocity (degrees per tick) to prevent whipping
+            var maxDegreesPerTick = 18.0f;
+            var capStep = rotDist > 0.001f ? (maxDegreesPerTick * (float) frameTimeTicks) / rotDist : 1.0f;
+            // Use whichever is slower
+            var rotFactor = Math.min(easeStep, capStep);
             var deltaDroneRot = Helpers.lerp(lastRot, newRot, rotFactor);
             lastRotations.put(dronePlayer, deltaDroneRot);
             
@@ -111,6 +116,25 @@ public class DroneRenderer {
                     }
                 }
                 
+                matrices.pop();
+            }
+            
+            // render carried item below drone center
+            var carriedItem = DronesClient.CARRIED_ITEMS.get(droneData.getDroneId());
+            if (carriedItem != null && !carriedItem.isEmpty()) {
+                matrices.push();
+                matrices.translate(0, -0.5, 0);
+                var itemLight = getMaxLight(BlockPos.ofFloored(movementData.position()), world);
+                MinecraftClient.getInstance().getItemRenderer().renderItem(
+                  carriedItem,
+                  ModelTransformationMode.GROUND,
+                  itemLight,
+                  OverlayTexture.DEFAULT_UV,
+                  matrices,
+                  vertexConsumers,
+                  world,
+                  0
+                );
                 matrices.pop();
             }
             

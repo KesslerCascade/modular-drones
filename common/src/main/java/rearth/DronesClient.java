@@ -5,6 +5,7 @@ import dev.architectury.networking.NetworkManager;
 import net.minecraft.block.Block;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.RenderLayer;
+import net.minecraft.item.ItemStack;
 import rearth.client.ui.DroneCreatorScreen;
 import rearth.init.BlockContent;
 import rearth.init.BlockEntitiesContent;
@@ -20,6 +21,7 @@ public final class DronesClient {
     public static Map<Supplier<Block>, RenderLayer> RENDER_LAYERS = new HashMap<>();  // this is used in client-specific parts to set render layers
     
     public static final HashMap<Integer, NetworkContent.DroneMoveSyncPacket> CURRENT_DATA = new HashMap<>();
+    public static final HashMap<Integer, ItemStack> CARRIED_ITEMS = new HashMap<>();
     
     public static void init() {
         Drones.LOGGER.info("Hello from drones client");
