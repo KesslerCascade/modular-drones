@@ -51,6 +51,11 @@ public class PickupBehaviour implements DroneBehaviour {
 
     @Override
     public void tick() {
+        if (owner.isRemoved()) {
+            finishTask();
+            return;
+        }
+
         switch (phase) {
             case MOVING_IN -> {
                 if (target == null || target.isRemoved()) {

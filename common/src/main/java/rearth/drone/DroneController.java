@@ -346,4 +346,12 @@ public class DroneController {
         }
         
     }
+
+    // Called on player disconnect/quit to purge stale runtime state. Persistent
+    // data (carried item) is already saved to the item stack component, so it
+    // is safe to drop the in-memory entry here. On the next login a fresh
+    // DroneServerData will be reconstructed from the saved component.
+    public static void clearPlayerData(ServerPlayerEntity player) {
+        getDroneOfPlayer(player).ifPresent(droneData -> WORK_DATA.remove(droneData.getDroneId()));
+    }
 }

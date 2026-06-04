@@ -40,6 +40,7 @@ public final class Drones {
         });
         
         PlayerEvent.ATTACK_ENTITY.register(DroneController::onPlayerAttackEntityEvent);
+        PlayerEvent.PLAYER_QUIT.register(DroneController::clearPlayerData);
         
         NetworkContent.init();
         
