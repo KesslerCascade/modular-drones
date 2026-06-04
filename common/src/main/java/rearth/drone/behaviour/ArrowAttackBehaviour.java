@@ -117,6 +117,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
         var initialVelocity = offset.normalize().multiply(2);
 
         var arrowEntity = new ArrowEntity(world, shotFrom.x, shotFrom.y, shotFrom.z, stack, null);
+        arrowEntity.setOwner(owner);
         arrowEntity.setVelocity(initialVelocity);
         world.spawnEntity(arrowEntity);
 
