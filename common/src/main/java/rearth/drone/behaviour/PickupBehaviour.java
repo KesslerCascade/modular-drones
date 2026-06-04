@@ -15,6 +15,7 @@ import rearth.drone.RecordedBlock;
 import rearth.init.TagContent;
 import rearth.util.Helpers;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.UUID;
@@ -196,12 +197,16 @@ public class PickupBehaviour implements DroneBehaviour {
                 return false;
             if (excludedId != null && entity.getUuid().equals(excludedId))
                 return false;
-            return ItemStack.areItemsAndComponentsEqual(entity.getStack(), carried);
+            if (!ItemStack.areItemsAndComponentsEqual(entity.getStack(), carried))
+                return false;
+            return Helpers.isLineAvailable(world, entity.getPos().add(0, 0.5, 0), pos);
         });
-        return candidates.isEmpty() ? Optional.empty() : Optional.of(candidates.getFirst());
+        if (candidates.isEmpty()) return Optional.empty();
+        candidates.sort(Comparator.comparingDouble(e -> e.getPos().distanceTo(pos)));
+        return Optional.of(candidates.getFirst());
     }
 
-    public static Optional<ItemEntity> GetPickupTarget(PlayerEntity player, @Nullable UUID excludedItemId) {
+    public static Optional<ItemEntity> GetPickupTarget(PlayerEntity player, @Nullable UUID excludedItemId, Vec3d dronePos) {
         var world = player.getWorld();
         var origin = player.getEyePos();
         var range = MAX_RANGE / 2;
@@ -212,7 +217,7 @@ public class PickupBehaviour implements DroneBehaviour {
                 return false;
             if (excludedItemId != null && entity.getUuid().equals(excludedItemId))
                 return false;
-            return true;
+            return Helpers.isLineAvailable(world, entity.getPos().add(0, 0.5, 0), dronePos);
         });
         return items.isEmpty() ? Optional.empty() : Optional.of(items.getFirst());
     }
@@ -232,7 +237,7 @@ public class PickupBehaviour implements DroneBehaviour {
                 return true;
             }
             // Otherwise look for a new item to pick up
-            var candidate = PickupBehaviour.GetPickupTarget(player, drone.excludedItem);
+            var candidate = PickupBehaviour.GetPickupTarget(player, drone.excludedItem, drone.currentPosition);
             if (candidate.isPresent()) {
                 drone.setCurrentTask(new PickupBehaviour(player, drone, candidate.get()));
                 return true;
