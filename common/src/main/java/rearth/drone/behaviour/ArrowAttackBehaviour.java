@@ -10,6 +10,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.entity.EntityPredicates;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
@@ -120,6 +122,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
         arrowEntity.setOwner(owner);
         arrowEntity.setVelocity(initialVelocity);
         world.spawnEntity(arrowEntity);
+        world.playSound(null, shotFrom.x, shotFrom.y, shotFrom.z, SoundEvents.BLOCK_DISPENSER_LAUNCH, SoundCategory.BLOCKS, 1.0f, 1.0f);
 
         // recoil: kick the drone backward opposite to the shot direction
         var recoilDir = shotFrom.subtract(targetPos).normalize();
