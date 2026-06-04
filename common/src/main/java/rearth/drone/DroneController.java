@@ -35,7 +35,6 @@ public class DroneController {
     
     // tp the drone to player if it's too far away
     public static final int SNAP_RANGE = 30;
-    private static final int MIN_INTERRUPT_TICKS = 40;
     
     private final static HashMap<Integer, DroneServerData> WORK_DATA = new HashMap<>();
     
@@ -51,7 +50,7 @@ public class DroneController {
     public static void updateDrone(PlayerEntity player, DroneServerData serverData) {
         
         if (serverData.getCurrentTask() == null) {
-            serverData.setCurrentTask(new PlayerSwarmBehaviour(serverData, player));
+            serverData.setIdle(player, serverData);
         }
         
         if (serverData.droneData.isGlowing()) {
@@ -69,7 +68,10 @@ public class DroneController {
             }
         }
 
-        serverData.currentTaskAge++;
+        if (serverData.taskCooldown > 0) {
+            serverData.taskCooldown--;
+        }
+
         updateDroneSensors(player, serverData);
         serverData.getCurrentTask().tick();
         updateDroneMovement(player, serverData);
@@ -126,7 +128,8 @@ public class DroneController {
     }
 
     private static void updateDroneSensors(PlayerEntity player, DroneServerData serverData) {
-        if (serverData.currentTaskAge < MIN_INTERRUPT_TICKS) return;
+        if (serverData.taskCooldown > 0)
+            return;
 
         var currentPriority = serverData.getCurrentTask().getPriority();
 

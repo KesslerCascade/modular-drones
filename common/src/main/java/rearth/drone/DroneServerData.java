@@ -1,5 +1,6 @@
 package rearth.drone;
 
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.Vec3d;
@@ -11,6 +12,7 @@ import rearth.drone.behaviour.PlayerSwarmBehaviour;
 import java.util.UUID;
 
 public class DroneServerData {
+    private static final int MIN_INTERRUPT_TICKS = 40;
     
     // synced to client
     public @NotNull Vec3d currentPosition;
@@ -24,7 +26,7 @@ public class DroneServerData {
     public int ghostTicks = 0;
     public int ghostWaitTime = 0;
     public int actionCooldown = 0;
-    public int currentTaskAge = 0;
+    public int taskCooldown = 0;
     
     // pickup inventory
     public @NotNull ItemStack carriedItem = ItemStack.EMPTY;
@@ -50,7 +52,17 @@ public class DroneServerData {
             this.currentTask.onStopped();
         }
         this.currentTask = currentTask;
-        this.currentTaskAge = 0;
+        this.taskCooldown = MIN_INTERRUPT_TICKS;
+    }
+
+    public void setIdle(PlayerEntity player, DroneServerData serverData) {
+        if (this.currentTask != null) {
+            this.currentTask.onStopped();
+        }
+        serverData.setCurrentTask(new PlayerSwarmBehaviour(serverData, player));
+
+        // Explicitly do NOT set taskCooldown here.
+        // The drone should immediately be able to switch to another task while idle.
     }
     
 }

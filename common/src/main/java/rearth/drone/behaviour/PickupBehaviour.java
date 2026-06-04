@@ -159,7 +159,7 @@ public class PickupBehaviour implements DroneBehaviour {
     }
 
     private void finishTask() {
-        drone.setCurrentTask(new PlayerSwarmBehaviour(drone, owner));
+        drone.setIdle(owner, drone);
     }
 
     @Override
