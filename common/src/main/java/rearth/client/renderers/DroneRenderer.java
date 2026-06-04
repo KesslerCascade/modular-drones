@@ -1,6 +1,7 @@
 package rearth.client.renderers;
 
 import net.minecraft.block.BlockEntityProvider;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.OverlayTexture;
@@ -95,7 +96,14 @@ public class DroneRenderer {
                 matrices.push();
                 matrices.translate(scaledLocalOffset.x, scaledLocalOffset.y, scaledLocalOffset.z);
                 matrices.scale(targetScale, targetScale, targetScale);
-                
+
+                // beacon faces up by default; rotate it around its center to face the drone's forward direction
+                if (state.getBlock() == Blocks.BEACON) {
+                    matrices.translate(0.5, 0.5, 0.5);
+                    matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90));
+                    matrices.translate(-0.5, -0.5, -0.5);
+                }
+
                 var light = getMaxLight(BlockPos.ofFloored(movementData.position()), world);
                 
                 // render baked / animated block
