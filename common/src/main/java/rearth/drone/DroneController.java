@@ -20,6 +20,7 @@ import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import rearth.drone.behaviour.*;
+import rearth.init.CarriedItemComponent;
 import rearth.init.ComponentContent;
 import rearth.init.ItemContent;
 import rearth.init.NetworkContent;
@@ -242,8 +243,8 @@ public class DroneController {
         var serverData = WORK_DATA.computeIfAbsent(droneData.getDroneId(), droneId -> {
             var newData = new DroneServerData(droneData, serverPlayer);
             var saved = droneStack.get().get(ComponentContent.CARRIED_ITEM_TYPE.get());
-            if (saved != null && !saved.isEmpty()) {
-                newData.carriedItem = saved.copy();
+            if (saved != null && !saved.stack().isEmpty()) {
+                newData.carriedItem = saved.stack().copy();
             }
             return newData;
         });
@@ -301,7 +302,7 @@ public class DroneController {
             if (carriedItem.isEmpty()) {
                 stack.remove(ComponentContent.CARRIED_ITEM_TYPE.get());
             } else {
-                stack.set(ComponentContent.CARRIED_ITEM_TYPE.get(), carriedItem.copy());
+                stack.set(ComponentContent.CARRIED_ITEM_TYPE.get(), new CarriedItemComponent(carriedItem.copy()));
             }
         });
     }
