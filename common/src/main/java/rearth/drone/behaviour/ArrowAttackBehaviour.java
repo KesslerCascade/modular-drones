@@ -151,7 +151,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
         if (target == null || target.isRemoved() || !target.isAlive())
             return null;
         var direction = target.getEyePos().subtract(owner.getEyePos()).normalize();
-        return owner.getEyePos().add(0, 0.5f, 0).add(direction.multiply(0.9f));
+        return owner.getEyePos().add(0, 1.0f, 0).add(direction.multiply(1.2f));
     }
 
     @Override
