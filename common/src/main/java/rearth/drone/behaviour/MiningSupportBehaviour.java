@@ -63,8 +63,8 @@ public class MiningSupportBehaviour implements DroneBehaviour {
         
         switch (phase) {
             case MOVING_IN -> {
-                
-                drone.targetPosition = getTargetPosition();
+
+                drone.setTarget(owner.getWorld(), getTargetPosition());
                 
                 var ownerDist = owner.getEyePos().distanceTo(drone.currentPosition);
                 if (ownerDist > MAX_RANGE) {
@@ -72,7 +72,7 @@ public class MiningSupportBehaviour implements DroneBehaviour {
                     return;
                 }
                 
-                var targetDist = drone.currentPosition.distanceTo(drone.targetPosition);
+                var targetDist = drone.currentPosition.distanceTo(drone.currentTargetPosition);
                 if (targetDist < REACH) {
                     phase = SupportPhase.SUPPORTING;
                     
@@ -84,7 +84,7 @@ public class MiningSupportBehaviour implements DroneBehaviour {
                 
             }
             case SUPPORTING -> {
-                drone.targetPosition = getTargetPosition();
+                drone.setTarget(owner.getWorld(), getTargetPosition());
                 
                 var ownerDist = owner.getEyePos().distanceTo(drone.currentPosition);
                 if (ownerDist > MAX_RANGE) {

@@ -100,22 +100,24 @@ public class DroneController {
         }
 
         var current = serverData.currentPosition;
-        var target = serverData.targetPosition;
-        var vel = serverData.currentVelocity;
-        var scale = powerMultiplier / 20.0;
+        var target = serverData.currentTargetPosition;
+        var step = powerMultiplier / 20.0;
 
         var axes = new ArrayList<AxisMove>();
 
-        var absDx = Math.abs(target.x - current.x);
-        var absDy = Math.abs(target.y - current.y);
-        var absDz = Math.abs(target.z - current.z);
+        var dx = target.x - current.x;
+        var dy = target.y - current.y;
+        var dz = target.z - current.z;
+        var absDx = Math.abs(dx);
+        var absDy = Math.abs(dy);
+        var absDz = Math.abs(dz);
 
-        if (absDx > 0.5 && Math.abs(vel.x) > 1e-4)
-            axes.add(new AxisMove(absDx, current.add(vel.x * scale, 0, 0)));
-        if (absDy > 0.5 && Math.abs(vel.y) > 1e-4)
-            axes.add(new AxisMove(absDy, current.add(0, vel.y * scale, 0)));
-        if (absDz > 0.5 && Math.abs(vel.z) > 1e-4)
-            axes.add(new AxisMove(absDz, current.add(0, 0, vel.z * scale)));
+        if (absDx > 0.01)
+            axes.add(new AxisMove(absDx, current.add(Math.signum(dx) * Math.min(step, absDx), 0, 0)));
+        if (absDy > 0.01)
+            axes.add(new AxisMove(absDy, current.add(0, Math.signum(dy) * Math.min(step, absDy), 0)));
+        if (absDz > 0.01)
+            axes.add(new AxisMove(absDz, current.add(0, 0, Math.signum(dz) * Math.min(step, absDz))));
 
         axes.sort(Comparator.comparingDouble(AxisMove::absDelta));
 
@@ -147,14 +149,23 @@ public class DroneController {
     }
     
     private static void updateDroneMovement(PlayerEntity player, DroneServerData serverData) {
-        
+
+        // advance waypoint when the final target is now directly reachable
+        if (serverData.nextTargetPosition != null) {
+            if (Helpers.isLineAvailable(player.getWorld(), serverData.currentPosition, serverData.nextTargetPosition)) {
+                serverData.currentTargetPosition = serverData.nextTargetPosition;
+                serverData.lastTargetPosition = serverData.nextTargetPosition;
+                serverData.nextTargetPosition = null;
+            }
+        }
+
         var powerMultiplier = serverData.droneData.power;
-        
+
         var accelerationPower = 0.2f;
         var bankingFactor = 30 * Math.sqrt(powerMultiplier);
-        
+
         var currentVelocity = serverData.currentVelocity;
-        var targetOffset = serverData.targetPosition.subtract(serverData.currentPosition);
+        var targetOffset = serverData.currentTargetPosition.subtract(serverData.currentPosition);
         var maxOffset = powerMultiplier / 3.0;
         if (targetOffset.length() > maxOffset)
             targetOffset = targetOffset.normalize().multiply(maxOffset);
@@ -163,9 +174,9 @@ public class DroneController {
         // Reset ramp only when the target position changes significantly (new task/target),
         // not on overshoot — resetting ramp there would weaken the correcting force at the worst moment.
         if (serverData.lastTargetPosition == null ||
-                serverData.targetPosition.distanceTo(serverData.lastTargetPosition) > 1.0) {
+                serverData.currentTargetPosition.distanceTo(serverData.lastTargetPosition) > 1.0) {
             serverData.accelerationRamp = DroneServerData.ACCELERATION_RAMP_STEP;
-            serverData.lastTargetPosition = serverData.targetPosition;
+            serverData.lastTargetPosition = serverData.currentTargetPosition;
         }
         serverData.accelerationRamp = Math.min(1.0f,
                 serverData.accelerationRamp + DroneServerData.ACCELERATION_RAMP_STEP);

@@ -54,7 +54,7 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
             // sets target to entity, and if too far / close enough updates phase
             case MOVING_IN -> {
 
-                drone.targetPosition = target.getEyePos();
+                drone.setTarget(owner.getWorld(), target.getEyePos());
 
                 var dist = drone.currentPosition.distanceTo(target.getEyePos());
                 var playerDist = drone.currentPosition.distanceTo(owner.getEyePos());
@@ -81,7 +81,7 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
                     return;
                 }
 
-                drone.targetPosition = target.getEyePos();
+                drone.setTarget(owner.getWorld(), target.getEyePos());
                 if (drone.actionCooldown == 0) {
                     // do attack
                     var damage = 2; // todo
@@ -97,7 +97,7 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
 
             }
             case MOVING_HOME -> {
-                drone.targetPosition = owner.getEyePos().add(0, 0.5, 0);
+                drone.setTarget(owner.getWorld(), owner.getEyePos().add(0, 0.5, 0));
                 var dist = drone.currentPosition.distanceTo(owner.getEyePos());
                 if (dist < HIT_RANGE * 2) {
                     this.finishTask();
@@ -164,7 +164,7 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
             targets = targets.stream()
                     .filter(target -> target.isAlive() && !target.isRemoved() && target instanceof Monster)
                     .filter(target -> !(target instanceof net.minecraft.entity.mob.EndermanEntity enderman) || enderman.isAngry())
-                    .filter(target -> Helpers.isLineAvailable(world, target.getEyePos(), playerHead))
+                    .filter(target -> Helpers.getDronePath(world, drone.currentPosition, target.getEyePos()).isReachable())
                     .toList();
 
             if (targets.isEmpty()) return false;

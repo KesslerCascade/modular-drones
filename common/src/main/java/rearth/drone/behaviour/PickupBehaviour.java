@@ -66,7 +66,7 @@ public class PickupBehaviour implements DroneBehaviour {
                     break;
                 }
 
-                drone.targetPosition = target.getPos().add(0, 0.5, 0);
+                drone.setTarget(owner.getWorld(), target.getPos().add(0, 0.5, 0));
 
                 var playerDist = drone.currentPosition.distanceTo(owner.getEyePos());
                 if (playerDist > MAX_RANGE) {
@@ -85,7 +85,7 @@ public class PickupBehaviour implements DroneBehaviour {
                     break;
                 }
 
-                drone.targetPosition = owner.getEyePos().add(0, 0.7, 0);
+                drone.setTarget(owner.getWorld(), owner.getEyePos().add(0, 0.7, 0));
 
                 var playerDist = drone.currentPosition.distanceTo(owner.getEyePos());
                 if (playerDist < 1) {
@@ -205,7 +205,7 @@ public class PickupBehaviour implements DroneBehaviour {
                 return false;
             if (!ItemStack.areItemsAndComponentsEqual(entity.getStack(), carried))
                 return false;
-            return Helpers.isLineAvailable(world, entity.getPos().add(0, 0.5, 0), pos);
+            return Helpers.getDronePath(world, pos, entity.getPos().add(0, 0.5, 0)).isReachable();
         });
         if (candidates.isEmpty()) return Optional.empty();
         candidates.sort(Comparator.comparingDouble(e -> e.getPos().distanceTo(pos)));
@@ -223,7 +223,7 @@ public class PickupBehaviour implements DroneBehaviour {
                 return false;
             if (excludedItemId != null && entity.getUuid().equals(excludedItemId))
                 return false;
-            return Helpers.isLineAvailable(world, entity.getPos().add(0, 0.5, 0), dronePos);
+            return Helpers.getDronePath(world, dronePos, entity.getPos().add(0, 0.5, 0)).isReachable();
         });
         return items.isEmpty() ? Optional.empty() : Optional.of(items.getFirst());
     }

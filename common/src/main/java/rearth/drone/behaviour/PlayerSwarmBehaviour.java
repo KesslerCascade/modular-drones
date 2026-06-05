@@ -9,23 +9,32 @@ import rearth.util.Helpers;
 import static rearth.drone.DroneController.SIMPLEX;
 
 public class PlayerSwarmBehaviour implements DroneBehaviour {
-    
+
+    private static final float SWARM_RANGE = 5.0f;
+
     private final DroneServerData drone;
     private final PlayerEntity owner;
-    
+
     public PlayerSwarmBehaviour(DroneServerData drone, PlayerEntity owner) {
         this.drone = drone;
         this.owner = owner;
     }
-    
+
     @Override
     public void tick() {
-        
+
         if (owner.isRemoved()) {
             drone.setCurrentTask(null);
         }
-        
-        drone.targetPosition = getIdlePositionTarget();
+
+        var distToPlayer = drone.currentPosition.distanceTo(owner.getEyePos());
+
+        if (distToPlayer > SWARM_RANGE) {
+            drone.setTarget(owner.getWorld(), getIdlePositionTarget());
+        } else {
+            drone.currentTargetPosition = getIdlePositionTarget();
+            drone.nextTargetPosition = null;
+        }
     }
     
     @Override

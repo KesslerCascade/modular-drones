@@ -4,10 +4,12 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import rearth.drone.behaviour.DroneBehaviour;
 import rearth.drone.behaviour.PlayerSwarmBehaviour;
+import rearth.util.Helpers;
 
 import java.util.UUID;
 
@@ -20,7 +22,8 @@ public class DroneServerData {
     public @NotNull Vec3d currentRotation;  // y is vertical, z is forward, x is right
     
     // not synced
-    public @NotNull Vec3d targetPosition = Vec3d.ZERO;
+    public @NotNull Vec3d currentTargetPosition = Vec3d.ZERO;
+    public @Nullable Vec3d nextTargetPosition = null;
     public @NotNull Vec3d currentVelocity = Vec3d.ZERO;
     public @NotNull Vec3d recoilVelocity = Vec3d.ZERO;
     private @Nullable DroneBehaviour currentTask = null;
@@ -56,6 +59,14 @@ public class DroneServerData {
         }
         this.currentTask = currentTask;
         this.taskCooldown = MIN_INTERRUPT_TICKS;
+    }
+
+    public void setTarget(World world, Vec3d finalTarget) {
+        var result = Helpers.getDronePath(world, currentPosition, finalTarget);
+        switch (result.status()) {
+            case DIRECT, NO_PATH -> { currentTargetPosition = finalTarget; nextTargetPosition = null; }
+            case VIA_WAYPOINT -> { currentTargetPosition = result.waypoint(); nextTargetPosition = finalTarget; }
+        }
     }
 
     public void setIdle(PlayerEntity player, DroneServerData serverData) {
