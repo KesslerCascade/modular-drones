@@ -3,15 +3,16 @@
   "id": "drones",
   "version": "${version}",
   "name": "Modular Drones",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "description": "Allows you to build modular drones.",
   "authors": [
-    "Me!"
+    "rearth",
+    "KesslerCascade"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "homepage": "https://github.com/KesslerCascade/ModularDronesContinued",
+    "sources": "https://github.com/KesslerCascade/ModularDronesContinued"
   },
-  "license": "CC0-1.0",
+  "license": "CC-BY-4.0",
   "icon": "assets/drones/icon.png",
   "environment": "*",
   "entrypoints": {

@@ -1,15 +1,15 @@
 modLoader = "javafml"
 loaderVersion = "[4,)"
-issueTrackerURL = "https://github.com/Rearth/Drone_Buddies/issues"
+issueTrackerURL = "https://github.com/KesslerCascade/ModularDronesContinued/issues"
 license = "CC-BY-4.0"
 
 [[mods]]
 modId = "drones"
 version = "${version}"
-displayName = "Modular Drones"
-authors = "Me! - rearth"
+displayName = "Modular Drones Continued"
+authors = "rearth, KesslerCascade"
 description = '''
-Small mod that allows the player to build modular drones.
+Mod that allows the player to build modular drones.
 '''
 logoFile = "assets/drones/icon.png"
 
