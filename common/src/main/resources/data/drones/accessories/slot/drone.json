@@ -2,5 +2,5 @@
   "size": 1,
   "operation": "set",
   "order": 100,
-  "icon": "accessories:gui/slot/charm"
+  "icon": "drones:gui/slot/drone"
 }
