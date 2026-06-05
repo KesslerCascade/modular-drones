@@ -13,7 +13,8 @@ import java.util.UUID;
 
 public class DroneServerData {
     private static final int MIN_INTERRUPT_TICKS = 40;
-    
+    public static final float ACCELERATION_RAMP_STEP = 0.15f;
+
     // synced to client
     public @NotNull Vec3d currentPosition;
     public @NotNull Vec3d currentRotation;  // y is vertical, z is forward, x is right
@@ -27,7 +28,8 @@ public class DroneServerData {
     public int ghostWaitTime = 0;
     public int actionCooldown = 0;
     public int taskCooldown = 0;
-    public float accelerationRamp = 0.15f;
+    public float accelerationRamp = ACCELERATION_RAMP_STEP;
+    public @Nullable Vec3d lastTargetPosition = null;
     
     // pickup inventory
     public @NotNull ItemStack carriedItem = ItemStack.EMPTY;

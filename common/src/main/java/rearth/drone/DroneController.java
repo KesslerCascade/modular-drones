@@ -95,7 +95,7 @@ public class DroneController {
      * smallest delta to the target (but > 0.5), checking axes in ascending delta
      * order.
      */
-    private static void tryAxisSlideMovement(World world, DroneServerData serverData, float powerMultiplier) {
+    private static boolean tryAxisSlideMovement(World world, DroneServerData serverData, float powerMultiplier) {
         record AxisMove(double absDelta, Vec3d candidatePos) {
         }
 
@@ -122,9 +122,10 @@ public class DroneController {
         for (var axis : axes) {
             if (Helpers.isLineAvailable(world, current, axis.candidatePos())) {
                 serverData.currentPosition = axis.candidatePos();
-                return;
+                return true;
             }
         }
+        return false;
     }
 
     private static void updateDroneSensors(PlayerEntity player, DroneServerData serverData) {
@@ -159,17 +160,25 @@ public class DroneController {
             targetOffset = targetOffset.normalize().multiply(maxOffset);
         var velocityDelta = targetOffset.subtract(currentVelocity);
 
-        // Reset ramp when hovering or target is behind us
-        if (currentVelocity.length() < 0.1) {
-            serverData.accelerationRamp = 0.15f;
-        } else if (targetOffset.length() > 0.01) {
-            var dot = currentVelocity.normalize().dotProduct(targetOffset.normalize());
-            if (dot < 0.0) {
-                serverData.accelerationRamp = 0.15f;
-            }
+        // Reset ramp only when the target position changes significantly (new task/target),
+        // not on overshoot — resetting ramp there would weaken the correcting force at the worst moment.
+        if (serverData.lastTargetPosition == null ||
+                serverData.targetPosition.distanceTo(serverData.lastTargetPosition) > 1.0) {
+            serverData.accelerationRamp = DroneServerData.ACCELERATION_RAMP_STEP;
+            serverData.lastTargetPosition = serverData.targetPosition;
         }
-        serverData.accelerationRamp = Math.min(1.0f, serverData.accelerationRamp + 0.15f);
-        var effectiveDelta = velocityDelta.multiply(serverData.accelerationRamp);
+        serverData.accelerationRamp = Math.min(1.0f,
+                serverData.accelerationRamp + DroneServerData.ACCELERATION_RAMP_STEP);
+
+        // When decelerating to arrive at target (moving faster than remaining distance implies),
+        // bypass the ramp so full correction force is applied — prevents overshoot.
+        float effectiveRamp;
+        if (currentVelocity.length() > targetOffset.length()) {
+            effectiveRamp = 1.0f;
+        } else {
+            effectiveRamp = serverData.accelerationRamp;
+        }
+        var effectiveDelta = velocityDelta.multiply(effectiveRamp);
 
         // 2 movement modes:
         // horizontal thrusters only
@@ -215,9 +224,14 @@ public class DroneController {
                 serverData.ghostTicks = 20;
             }
             // while waiting, try to slide along the least-offset unobstructed axis
-            tryAxisSlideMovement(player.getWorld(), serverData, powerMultiplier);
+            if (!tryAxisSlideMovement(player.getWorld(), serverData, powerMultiplier)) {
+                // don't accumulate velocity, this avoids a sudden snap once ghosting kicks in
+                serverData.currentVelocity = Vec3d.ZERO;
+                serverData.accelerationRamp = DroneServerData.ACCELERATION_RAMP_STEP;
+            }
         } else if (positionBlocked) {  // just hit an obstacle, start ghosting CD
             serverData.currentVelocity = Vec3d.ZERO;
+            serverData.accelerationRamp = DroneServerData.ACCELERATION_RAMP_STEP;
             serverData.ghostWaitTime = 40;
         } else {    // normal movement
             serverData.currentPosition = nextPosition;
