@@ -33,7 +33,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
 
     private static final int MAX_RANGE = 25;
     private static final int MAX_CONSECUTIVE_FAILED_ATTACKS = 14;
-    private static final double RECOIL_STRENGTH = 1.5;
+    private static final double RECOIL_STRENGTH = 0.75;
     static final int ARROW_PRIORITY_MIN = 15;
     static final int ARROW_PRIORITY_MAX = 35;
 
