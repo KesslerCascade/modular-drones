@@ -3,6 +3,7 @@ package rearth.util;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import net.minecraft.core.BlockPos;
@@ -10,8 +11,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class FloodFill {
-    
-    public static List<BlockPos> Run(Level world, BlockPos start, Predicate<BlockState> filter, Predicate<BlockPos> positionFilter, int maxCount, boolean allowDiagonal) {
+
+    public static List<BlockPos> Run(Level world, BlockPos start, BiPredicate<BlockPos, BlockState> filter, Predicate<BlockPos> positionFilter, int maxCount, boolean allowDiagonal) {
         
         var checked = new HashSet<BlockPos>();
         var results = new ArrayList<BlockPos>();
@@ -28,7 +29,7 @@ public class FloodFill {
                 checked.add(checkPos);
                 
                 var checkState = world.getBlockState(checkPos);
-                if (filter.test(checkState)) {
+                if (filter.test(checkPos, checkState)) {
                     results.add(checkPos);
                     
                     // add neighbors to next set

@@ -28,6 +28,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -50,7 +51,7 @@ public class ControllerBlockEntity extends BlockEntity {
         
         if (frameStart.isEmpty()) return List.of();
         
-        var frameBlocks = FloodFill.Run(level, frameStart.get(), candidate -> candidate.is(BlockContent.ASSEMBLER_FRAME), checkPos -> true, 200, false);
+        var frameBlocks = FloodFill.Run(level, frameStart.get(), (pos, candidate) -> candidate.is(BlockContent.ASSEMBLER_FRAME), checkPos -> true, 200, false);
         
         if (frameBlocks.isEmpty()) return List.of();
         
@@ -66,15 +67,15 @@ public class ControllerBlockEntity extends BlockEntity {
         for (var frameBlock : frameBlocks) {
             var frameAbove = frameBlock.above();
             var candidateState = level.getBlockState(frameAbove);
-            if (isValidDroneBlock(candidateState)) {
+            if (isValidDroneBlock(level, frameAbove, candidateState)) {
                 droneStart = frameAbove;
                 break;
             }
         }
-        
+
         if (droneStart == null) return null;
-        
-        var droneBlocks = FloodFill.Run(level, droneStart, ControllerBlockEntity::isValidDroneBlock, this::isAboveOwnFrame, 1000, true);
+
+        var droneBlocks = FloodFill.Run(level, droneStart, (pos, state) -> isValidDroneBlock(level, pos, state), this::isAboveOwnFrame, 1000, true);
         var droneCenter = findCenterOfMass(droneBlocks);
         System.out.println("drone: " + droneBlocks);
         
@@ -167,8 +168,9 @@ public class ControllerBlockEntity extends BlockEntity {
         
     }
     
-    private static boolean isValidDroneBlock(BlockState state) {
-        return !state.isAir() && !state.liquid() && !state.is(BlockContent.ASSEMBLER_FRAME) && !state.is(BlockContent.ASSEMBLER_CONTROLLER);
+    private static boolean isValidDroneBlock(Level level, BlockPos pos, BlockState state) {
+        return !state.isAir() && !state.liquid() && !state.is(BlockContent.ASSEMBLER_FRAME) && !state.is(BlockContent.ASSEMBLER_CONTROLLER)
+          && state.getDestroySpeed(level, pos) >= 0;
     }
     
     // this is called on the server, after the player has clicked the "assemble" button
