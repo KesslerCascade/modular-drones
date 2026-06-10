@@ -1,7 +1,8 @@
 package rearth.neoforge.client;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.RenderLayers;
+import java.util.Map.Entry;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -28,7 +29,7 @@ public class DronesModNeoForgeClient {
         @SubscribeEvent
         public static void onWorldRender(RenderLevelStageEvent event) {
             if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
-                DroneRenderer.doRender(event.getPoseStack(), event.getCamera(), MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers());
+                DroneRenderer.doRender(event.getPoseStack(), event.getCamera(), Minecraft.getInstance().renderBuffers().bufferSource());
             }
         }
     }
@@ -40,7 +41,7 @@ public class DronesModNeoForgeClient {
         public void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
             
             for (var entry : DronesClient.RENDER_LAYERS.entrySet()) {
-                RenderLayers.setRenderLayer(entry.getKey().get(), entry.getValue());
+                ItemBlockRenderTypes.setRenderLayer(entry.getKey().get(), entry.getValue());
             }
         }
     }

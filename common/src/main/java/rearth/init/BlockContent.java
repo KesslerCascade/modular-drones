@@ -2,12 +2,12 @@ package rearth.init;
 
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
-import net.minecraft.block.AbstractBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import rearth.Drones;
 import rearth.blocks.controller.ControllerBlock;
 import rearth.blocks.rotors.DrillBlock;
@@ -19,15 +19,15 @@ import rearth.blocks.rotors.WoodenRotor;
 
 public class BlockContent {
     
-    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(Drones.MOD_ID, RegistryKeys.BLOCK);
+    public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(Drones.MOD_ID, Registries.BLOCK);
     
-    public static final RegistrySupplier<Block> ASSEMBLER_FRAME = BLOCKS.register("frame", () -> new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
-    public static final RegistrySupplier<Block> ASSEMBLER_CONTROLLER = BLOCKS.register("controller", () -> new ControllerBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
+    public static final RegistrySupplier<Block> ASSEMBLER_FRAME = BLOCKS.register("frame", () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK)));
+    public static final RegistrySupplier<Block> ASSEMBLER_CONTROLLER = BLOCKS.register("controller", () -> new ControllerBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK)));
     
-    public static final RegistrySupplier<Block> WOOD_ROTOR = BLOCKS.register("wood_rotor", () -> new WoodenRotor(AbstractBlock.Settings.copy(Blocks.OAK_PLANKS).nonOpaque()));
-    public static final RegistrySupplier<Block> IRON_ROTOR = BLOCKS.register("iron_rotor", () -> new IronRotor(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK).nonOpaque()));
-    public static final RegistrySupplier<Block> ION_THRUSTER = BLOCKS.register("ion_thruster", () -> new IonThruster(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK).nonOpaque()));
-    public static final RegistrySupplier<Block> DRILL = BLOCKS.register("drill", () -> new DrillBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK).nonOpaque()));
+    public static final RegistrySupplier<Block> WOOD_ROTOR = BLOCKS.register("wood_rotor", () -> new WoodenRotor(BlockBehaviour.Properties.ofFullCopy(Blocks.OAK_PLANKS).noOcclusion()));
+    public static final RegistrySupplier<Block> IRON_ROTOR = BLOCKS.register("iron_rotor", () -> new IronRotor(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+    public static final RegistrySupplier<Block> ION_THRUSTER = BLOCKS.register("ion_thruster", () -> new IonThruster(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
+    public static final RegistrySupplier<Block> DRILL = BLOCKS.register("drill", () -> new DrillBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.IRON_BLOCK).noOcclusion()));
     
     public static void registerItems() {
         
@@ -41,7 +41,7 @@ public class BlockContent {
     }
     
     private static void registerItem(RegistrySupplier<Block> block, String name) {
-        ItemContent.ITEMS.register(Drones.id(name), () -> new BlockItem(block.get(), new Item.Settings().arch$tab(ItemGroups.DRONES_TAB)));
+        ItemContent.ITEMS.register(Drones.id(name), () -> new BlockItem(block.get(), new Item.Properties().arch$tab(ItemGroups.DRONES_TAB)));
     }
     
 }

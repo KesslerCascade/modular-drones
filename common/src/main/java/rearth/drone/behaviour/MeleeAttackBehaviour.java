@@ -1,24 +1,26 @@
 package rearth.drone.behaviour;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.DamageTypes;
-import net.minecraft.entity.mob.Monster;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3i;
 import rearth.drone.DroneServerData;
 import rearth.drone.RecordedBlock;
 import rearth.init.TagContent;
 import rearth.util.Helpers;
-
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
+import net.minecraft.core.Vec3i;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 // an instance of a behaviour to attack one specific entity.
 // consists of 3 phases: move in, attack, move home
@@ -32,13 +34,13 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
     public static final int PLAYER_INITIATED_PRIORITY = 13;
 
     private final LivingEntity target;
-    private final PlayerEntity owner;
+    private final Player owner;
     private final DroneServerData drone;
     private final int assignedPriority;
 
     private AttackPhase phase;
 
-    public MeleeAttackBehaviour(LivingEntity target, PlayerEntity owner, DroneServerData drone, int priority) {
+    public MeleeAttackBehaviour(LivingEntity target, Player owner, DroneServerData drone, int priority) {
         this.target = target;
         this.owner = owner;
         this.drone = drone;
@@ -54,10 +56,10 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
             // sets target to entity, and if too far / close enough updates phase
             case MOVING_IN -> {
 
-                drone.setTarget(owner.getWorld(), target.getEyePos());
+                drone.setTarget(owner.level(), target.getEyePosition());
 
-                var dist = drone.currentPosition.distanceTo(target.getEyePos());
-                var playerDist = drone.currentPosition.distanceTo(owner.getEyePos());
+                var dist = drone.currentPosition.distanceTo(target.getEyePosition());
+                var playerDist = drone.currentPosition.distanceTo(owner.getEyePosition());
 
                 if (dist > MAX_RANGE || playerDist > MAX_RANGE) {
                     phase = AttackPhase.MOVING_HOME;
@@ -70,7 +72,7 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
             // keeps attacking the entity after a specific cooldown
             case ATTACKING -> {
 
-                var dist = drone.currentPosition.distanceTo(target.getEyePos());
+                var dist = drone.currentPosition.distanceTo(target.getEyePosition());
                 if (dist > HIT_RANGE * 2) {
                     phase = AttackPhase.MOVING_IN;
                     return;
@@ -81,24 +83,24 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
                     return;
                 }
 
-                drone.setTarget(owner.getWorld(), target.getEyePos());
+                drone.setTarget(owner.level(), target.getEyePosition());
                 if (drone.actionCooldown == 0) {
                     // do attack
                     var damage = 2; // todo
-                    target.damage(new DamageSource(owner.getWorld().getRegistryManager().get(RegistryKeys.DAMAGE_TYPE).entryOf(DamageTypes.PLAYER_ATTACK), owner), damage);
+                    target.hurt(new DamageSource(owner.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(DamageTypes.PLAYER_ATTACK), owner), damage);
                     drone.actionCooldown = ATTACK_COOLDOWN;
 
-                    if (owner.getWorld() instanceof ServerWorld serverWorld) {
-                        var middle = drone.currentPosition.add(target.getEyePos()).multiply(0.5f);
-                        var forward = target.getEyePos().subtract(drone.currentPosition).normalize();
-                        serverWorld.spawnParticles(ParticleTypes.SWEEP_ATTACK, middle.x, middle.y, middle.z, 1, forward.x, forward.y, forward.z, 0.2f);
+                    if (owner.level() instanceof ServerLevel serverWorld) {
+                        var middle = drone.currentPosition.add(target.getEyePosition()).scale(0.5f);
+                        var forward = target.getEyePosition().subtract(drone.currentPosition).normalize();
+                        serverWorld.sendParticles(ParticleTypes.SWEEP_ATTACK, middle.x, middle.y, middle.z, 1, forward.x, forward.y, forward.z, 0.2f);
                     }
                 }
 
             }
             case MOVING_HOME -> {
-                drone.setTarget(owner.getWorld(), owner.getEyePos().add(0, 0.5, 0));
-                var dist = drone.currentPosition.distanceTo(owner.getEyePos());
+                drone.setTarget(owner.level(), owner.getEyePosition().add(0, 0.5, 0));
+                var dist = drone.currentPosition.distanceTo(owner.getEyePosition());
                 if (dist < HIT_RANGE * 2) {
                     this.finishTask();
                 }
@@ -115,21 +117,21 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
     public float getCurrentYaw() {
 
         if (phase == AttackPhase.MOVING_HOME)
-            return Helpers.calculateYaw(drone.currentPosition, owner.getEyePos());
+            return Helpers.calculateYaw(drone.currentPosition, owner.getEyePosition());
 
         if (phase == AttackPhase.ATTACKING) {
             var progress = drone.actionCooldown / (float) ATTACK_COOLDOWN;
-            return Helpers.calculateYaw(drone.currentPosition, target.getEyePos()) + progress * 90;
+            return Helpers.calculateYaw(drone.currentPosition, target.getEyePosition()) + progress * 90;
         }
 
-        return Helpers.calculateYaw(drone.currentPosition, target.getEyePos());
+        return Helpers.calculateYaw(drone.currentPosition, target.getEyePosition());
     }
 
     @Override
     public float getExtraRoll() {
 
         if (phase == AttackPhase.ATTACKING) {
-            var time = owner.getWorld().getTime();
+            var time = owner.level().getGameTime();
             return (float) (Math.sin(time / 2f) * 20);
         }
 
@@ -153,24 +155,24 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
         }
 
         @Override
-        public boolean sense(DroneServerData drone, PlayerEntity player) {
+        public boolean sense(DroneServerData drone, Player player) {
 
-            var world = player.getWorld();
+            var world = player.level();
             var entityRange = 16;
-            var playerHead = player.getEyePos();
+            var playerHead = player.getEyePosition();
 
-            var targets = world.getEntitiesByClass(LivingEntity.class, new Box(playerHead.x - entityRange, playerHead.y - entityRange, playerHead.z - entityRange, playerHead.x + entityRange, playerHead.y + entityRange, playerHead.z + entityRange), EntityPredicates.VALID_LIVING_ENTITY.and(EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
-            targets.sort(Comparator.comparingDouble((entity) -> entity.squaredDistanceTo(drone.currentPosition)));
+            var targets = world.getEntitiesOfClass(LivingEntity.class, new AABB(playerHead.x - entityRange, playerHead.y - entityRange, playerHead.z - entityRange, playerHead.x + entityRange, playerHead.y + entityRange, playerHead.z + entityRange), EntitySelector.LIVING_ENTITY_STILL_ALIVE.and(EntitySelector.NO_CREATIVE_OR_SPECTATOR));
+            targets.sort(Comparator.comparingDouble((entity) -> entity.distanceToSqr(drone.currentPosition)));
             targets = targets.stream()
-                    .filter(target -> target.isAlive() && !target.isRemoved() && target instanceof Monster)
-                    .filter(target -> !(target instanceof net.minecraft.entity.mob.EndermanEntity enderman) || enderman.isAngry())
-                    .filter(target -> Helpers.getDronePath(world, drone.currentPosition, target.getEyePos()).isReachable())
+                    .filter(target -> target.isAlive() && !target.isRemoved() && target instanceof Enemy)
+                    .filter(target -> !(target instanceof net.minecraft.world.entity.monster.EnderMan enderman) || enderman.isCreepy())
+                    .filter(target -> Helpers.getDronePath(world, drone.currentPosition, target.getEyePosition()).isReachable())
                     .toList();
 
             if (targets.isEmpty()) return false;
 
             var bestTarget = targets.getFirst();
-            var dist = drone.currentPosition.distanceTo(bestTarget.getEyePos());
+            var dist = drone.currentPosition.distanceTo(bestTarget.getEyePosition());
             var t = Math.clamp(1.0 - dist / entityRange, 0.0, 1.0);
             var priority = (int) Math.round(MELEE_PRIORITY_MIN + t * (MELEE_PRIORITY_MAX - MELEE_PRIORITY_MIN));
             var currentPriority = drone.getCurrentTask() != null ? drone.getCurrentTask().getPriority() : 0;
@@ -184,7 +186,7 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
     public static boolean isValid(RecordedBlock block, HashMap<Vec3i, BlockState> frame) {
         // is valid when facing forward (south) and not blocked
 
-        var blockMatches = block.state().isIn(TagContent.MELEE_DAMAGE);
+        var blockMatches = block.state().is(TagContent.MELEE_DAMAGE);
         if (!blockMatches) return false;
 
         // ensure front is free

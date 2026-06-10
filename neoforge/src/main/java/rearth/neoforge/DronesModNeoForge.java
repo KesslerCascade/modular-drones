@@ -1,5 +1,6 @@
 package rearth.neoforge;
 
+import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
@@ -25,8 +26,8 @@ public final class DronesModNeoForge {
     
         @SubscribeEvent
         public static void onPlayerStartBreakingBlock(PlayerInteractEvent.LeftClickBlock event) {
-            var world = event.getEntity().getWorld();
-            if (!world.isClient)
+            var world = event.getEntity().level();
+            if (!world.isClientSide)
                 DroneController.onPlayerBlockBreakStart(event.getEntity(), event.getPos());
         }
     

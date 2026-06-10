@@ -1,32 +1,34 @@
 package rearth.items;
 
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.item.Equipment;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import rearth.drone.DroneData;
+import rearth.drone.behaviour.DroneBehaviour.BlockFunctions;
 import rearth.init.ComponentContent;
-
+import java.util.EnumSet;
 import java.util.List;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.Equipable;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 
-public class PocketDrone extends Item implements Equipment {
+public class PocketDrone extends Item implements Equipable {
     
-    public PocketDrone(Settings settings) {
+    public PocketDrone(Properties settings) {
         super(settings);
     }
     
     @Override
-    public EquipmentSlot getSlotType() {
+    public EquipmentSlot getEquipmentSlot() {
         return EquipmentSlot.HEAD;
     }
     
     @Override
-    public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, TooltipType type) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag type) {
         
-        if (!stack.contains(ComponentContent.DRONE_DATA_TYPE.get())) {
-            super.appendTooltip(stack, context, tooltip, type);
+        if (!stack.has(ComponentContent.DRONE_DATA_TYPE.get())) {
+            super.appendHoverText(stack, context, tooltip, type);
             return;
         }
         
@@ -37,19 +39,19 @@ public class PocketDrone extends Item implements Equipment {
         var abilities = data.installed;
         var size = data.getSize();
         
-        tooltip.add(Text.translatable("tooltip.drones.data_speed", speed));
-        tooltip.add(Text.translatable("tooltip.drones.block_count", blocks));
-        tooltip.add(Text.translatable("tooltip.drones.data_size", size));
-        tooltip.add(Text.translatable("tooltip.drones.abilities_heading"));
+        tooltip.add(Component.translatable("tooltip.drones.data_speed", speed));
+        tooltip.add(Component.translatable("tooltip.drones.block_count", blocks));
+        tooltip.add(Component.translatable("tooltip.drones.data_size", size));
+        tooltip.add(Component.translatable("tooltip.drones.abilities_heading"));
         
         for (var ability : abilities) {
-            tooltip.add(Text.literal(" - ").append(Text.translatable("drones.ability." + ability.name().toLowerCase())).formatted(Formatting.ITALIC));
+            tooltip.add(Component.literal(" - ").append(Component.translatable("drones.ability." + ability.name().toLowerCase())).withStyle(ChatFormatting.ITALIC));
         }
         
-        tooltip.add(Text.literal(""));
-        tooltip.add(Text.translatable("tooltip.drones.equip_hint").formatted(Formatting.ITALIC, Formatting.GRAY));
+        tooltip.add(Component.literal(""));
+        tooltip.add(Component.translatable("tooltip.drones.equip_hint").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY));
         
         
-        super.appendTooltip(stack, context, tooltip, type);
+        super.appendHoverText(stack, context, tooltip, type);
     }
 }

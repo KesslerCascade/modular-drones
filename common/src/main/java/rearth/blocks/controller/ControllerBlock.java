@@ -2,64 +2,66 @@ package rearth.blocks.controller;
 
 import com.mojang.serialization.MapCodec;
 import dev.architectury.networking.NetworkManager;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.BlockWithEntity;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.ItemActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
+import rearth.drone.DroneData;
 import rearth.init.BlockEntitiesContent;
 import rearth.init.ComponentContent;
 import rearth.init.ItemContent;
 import rearth.init.NetworkContent;
 
 import java.util.List;
+import java.util.Optional;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
-public class ControllerBlock extends BlockWithEntity {
+public class ControllerBlock extends BaseEntityBlock {
     
-    public ControllerBlock(Settings settings) {
+    public ControllerBlock(Properties settings) {
         super(settings);
     }
     
     @Override
-    protected MapCodec<? extends BlockWithEntity> getCodec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return null;
     }
     
     @Override
-    protected BlockRenderType getRenderType(BlockState state) {
-        return BlockRenderType.MODEL;
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
     }
     
     @Override
-    public @Nullable BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+    public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new ControllerBlockEntity(pos, state);
     }
     
     @Override
-    public void appendTooltip(ItemStack stack, Item.TooltipContext context, List<Text> tooltip, TooltipType options) {
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag options) {
         
-        tooltip.add(Text.translatable("tooltip.drones.builder").formatted(Formatting.GRAY, Formatting.ITALIC));
+        tooltip.add(Component.translatable("tooltip.drones.builder").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
         
-        super.appendTooltip(stack, context, tooltip, options);
+        super.appendHoverText(stack, context, tooltip, options);
     }
     
     @Override
-    protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
         
-        if (!world.isClient && player instanceof ServerPlayerEntity serverPlayer) {
+        if (!world.isClientSide && player instanceof ServerPlayer serverPlayer) {
             var candidate = world.getBlockEntity(pos, BlockEntitiesContent.ASSEMBLER_CONTROLLER.get());
             candidate.ifPresent(controllerBlockEntity ->
                                   NetworkManager.sendToPlayer(serverPlayer, new NetworkContent.OpenDroneScreenPacket(pos))
@@ -67,27 +69,27 @@ public class ControllerBlock extends BlockWithEntity {
         }
 
         
-        return ActionResult.SUCCESS;
+        return InteractionResult.SUCCESS;
     }
     
     @Override
-    protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         
-        if (stack.isOf(ItemContent.POCKET_DRONE.get()) && stack.contains(ComponentContent.DRONE_DATA_TYPE.get())) {
+        if (stack.is(ItemContent.POCKET_DRONE.get()) && stack.has(ComponentContent.DRONE_DATA_TYPE.get())) {
             System.out.println("Loading pocket drone");
             
             var stackData = stack.get(ComponentContent.DRONE_DATA_TYPE.get());
             
             var candidate = world.getBlockEntity(pos, BlockEntitiesContent.ASSEMBLER_CONTROLLER.get());
-            if (candidate.isPresent() && !world.isClient()) {
+            if (candidate.isPresent() && !world.isClientSide()) {
                 var imported = candidate.get().loadDroneToWorld(stackData);
                 if (imported) {
-                    stack.decrement(1);
-                    return ItemActionResult.CONSUME;
+                    stack.shrink(1);
+                    return ItemInteractionResult.CONSUME;
                 }
             }
         }
         
-        return super.onUseWithItem(stack, state, world, pos, player, hand, hit);
+        return super.useItemOn(stack, state, world, pos, player, hand, hit);
     }
 }

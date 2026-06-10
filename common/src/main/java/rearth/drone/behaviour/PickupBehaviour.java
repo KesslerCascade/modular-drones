@@ -1,26 +1,27 @@
 package rearth.drone.behaviour;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.Vec3i;
 import org.jetbrains.annotations.Nullable;
 import rearth.drone.DroneController;
 import rearth.drone.DroneServerData;
 import rearth.drone.RecordedBlock;
 import rearth.init.TagContent;
 import rearth.util.Helpers;
-
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.core.Vec3i;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 // enabled with a lodestone and observer
 public class PickupBehaviour implements DroneBehaviour {
@@ -29,14 +30,14 @@ public class PickupBehaviour implements DroneBehaviour {
     private static final float PICKUP_RANGE = 0.75f;
     private static final int CONSOLIDATION_RANGE = 8;
 
-    private final PlayerEntity owner;
+    private final Player owner;
     private final DroneServerData drone;
     private @Nullable ItemEntity target;
 
     private PickupPhase phase;
 
     // Start in MOVING_IN toward a specific target
-    public PickupBehaviour(PlayerEntity owner, DroneServerData drone, ItemEntity target) {
+    public PickupBehaviour(Player owner, DroneServerData drone, ItemEntity target) {
         this.owner = owner;
         this.drone = drone;
         this.target = target;
@@ -45,7 +46,7 @@ public class PickupBehaviour implements DroneBehaviour {
 
     // Start in MOVING_HOME to deliver already-carried item (e.g. resume after
     // combat)
-    public PickupBehaviour(PlayerEntity owner, DroneServerData drone) {
+    public PickupBehaviour(Player owner, DroneServerData drone) {
         this.owner = owner;
         this.drone = drone;
         this.target = null;
@@ -66,15 +67,15 @@ public class PickupBehaviour implements DroneBehaviour {
                     break;
                 }
 
-                drone.setTarget(owner.getWorld(), target.getPos().add(0, 0.5, 0));
+                drone.setTarget(owner.level(), target.position().add(0, 0.5, 0));
 
-                var playerDist = drone.currentPosition.distanceTo(owner.getEyePos());
+                var playerDist = drone.currentPosition.distanceTo(owner.getEyePosition());
                 if (playerDist > MAX_RANGE) {
                     phase = PickupPhase.MOVING_HOME;
                     break;
                 }
 
-                var targetDist = drone.currentPosition.distanceTo(target.getPos().add(0, 0.5, 0));
+                var targetDist = drone.currentPosition.distanceTo(target.position().add(0, 0.5, 0));
                 if (targetDist < PICKUP_RANGE) {
                     collectItem();
                 }
@@ -85,9 +86,9 @@ public class PickupBehaviour implements DroneBehaviour {
                     break;
                 }
 
-                drone.setTarget(owner.getWorld(), owner.getEyePos().add(0, 0.7, 0));
+                drone.setTarget(owner.level(), owner.getEyePosition().add(0, 0.7, 0));
 
-                var playerDist = drone.currentPosition.distanceTo(owner.getEyePos());
+                var playerDist = drone.currentPosition.distanceTo(owner.getEyePosition());
                 if (playerDist < 1) {
                     deliverItem();
                 }
@@ -96,13 +97,13 @@ public class PickupBehaviour implements DroneBehaviour {
     }
 
     private void collectItem() {
-        var entityStack = target.getStack();
+        var entityStack = target.getItem();
 
         int space;
         if (drone.carriedItem.isEmpty()) {
-            space = entityStack.getMaxCount();
-        } else if (ItemStack.areItemsAndComponentsEqual(drone.carriedItem, entityStack)) {
-            space = drone.carriedItem.getMaxCount() - drone.carriedItem.getCount();
+            space = entityStack.getMaxStackSize();
+        } else if (ItemStack.isSameItemSameComponents(drone.carriedItem, entityStack)) {
+            space = drone.carriedItem.getMaxStackSize() - drone.carriedItem.getCount();
         } else {
             // Different item type somehow. Abort pickup, keep what we're already carrying
             phase = PickupPhase.MOVING_HOME;
@@ -114,14 +115,14 @@ public class PickupBehaviour implements DroneBehaviour {
         if (drone.carriedItem.isEmpty()) {
             drone.carriedItem = entityStack.copyWithCount(toTake);
         } else {
-            drone.carriedItem.increment(toTake);
+            drone.carriedItem.grow(toTake);
         }
 
         if (toTake >= entityStack.getCount()) {
             target.discard();
         } else {
             // Partial pickup - leave the remainder in the world
-            entityStack.decrement(toTake);
+            entityStack.shrink(toTake);
         }
         target = null;
 
@@ -129,8 +130,8 @@ public class PickupBehaviour implements DroneBehaviour {
         DroneController.saveCarriedItemToStack(owner, drone.carriedItem);
 
         // Try to consolidate nearby matching items before returning home
-        if (drone.carriedItem.getMaxCount() > 1 && drone.carriedItem.getCount() < drone.carriedItem.getMaxCount()) {
-            var next = findSameTypeNearDrone(drone, drone.carriedItem, owner.getWorld(), drone.excludedItem);
+        if (drone.carriedItem.getMaxStackSize() > 1 && drone.carriedItem.getCount() < drone.carriedItem.getMaxStackSize()) {
+            var next = findSameTypeNearDrone(drone, drone.carriedItem, owner.level(), drone.excludedItem);
             if (next.isPresent()) {
                 target = next.get();
                 // stay in MOVING_IN
@@ -144,18 +145,18 @@ public class PickupBehaviour implements DroneBehaviour {
     private void deliverItem() {
         var toDeliver = drone.carriedItem.copy();
         var countBefore = toDeliver.getCount();
-        owner.getInventory().insertStack(toDeliver);
+        owner.getInventory().add(toDeliver);
         if (toDeliver.getCount() < countBefore) {
-            owner.getWorld().playSound(null, owner.getBlockPos(), SoundEvents.ENTITY_ITEM_PICKUP, SoundCategory.PLAYERS, 0.2f, ((owner.getRandom().nextFloat() - owner.getRandom().nextFloat()) * 0.7f + 1.0f) * 2.0f);
+            owner.level().playSound(null, owner.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.2f, ((owner.getRandom().nextFloat() - owner.getRandom().nextFloat()) * 0.7f + 1.0f) * 2.0f);
         }
 
-        if (!toDeliver.isEmpty() && owner.getWorld() instanceof ServerWorld serverWorld) {
+        if (!toDeliver.isEmpty() && owner.level() instanceof ServerLevel serverWorld) {
             // Inventory full - drop remainder at drone position
             var pos = drone.currentPosition;
             var dropped = new ItemEntity(serverWorld, pos.x, pos.y, pos.z, toDeliver);
-            dropped.setVelocity(Vec3d.ZERO);
-            serverWorld.spawnEntity(dropped);
-            drone.excludedItem = dropped.getUuid();
+            dropped.setDeltaMovement(Vec3.ZERO);
+            serverWorld.addFreshEntity(dropped);
+            drone.excludedItem = dropped.getUUID();
             drone.excludedItemTimeout = 200;
         }
 
@@ -178,9 +179,9 @@ public class PickupBehaviour implements DroneBehaviour {
     @Override
     public float getCurrentYaw() {
         if (phase == PickupPhase.MOVING_IN && target != null) {
-            return Helpers.calculateYaw(drone.currentPosition, target.getEyePos());
+            return Helpers.calculateYaw(drone.currentPosition, target.getEyePosition());
         }
-        return Helpers.calculateYaw(drone.currentPosition, owner.getEyePos());
+        return Helpers.calculateYaw(drone.currentPosition, owner.getEyePosition());
     }
 
     @Override
@@ -193,37 +194,37 @@ public class PickupBehaviour implements DroneBehaviour {
     }
 
     private static Optional<ItemEntity> findSameTypeNearDrone(DroneServerData drone, ItemStack carried,
-            net.minecraft.world.World world, @Nullable UUID excludedId) {
+            net.minecraft.world.level.Level world, @Nullable UUID excludedId) {
         var pos = drone.currentPosition;
-        var box = new Box(
+        var box = new AABB(
                 pos.x - CONSOLIDATION_RANGE, pos.y - CONSOLIDATION_RANGE, pos.z - CONSOLIDATION_RANGE,
                 pos.x + CONSOLIDATION_RANGE, pos.y + CONSOLIDATION_RANGE, pos.z + CONSOLIDATION_RANGE);
-        var candidates = world.getEntitiesByClass(ItemEntity.class, box, entity -> {
-            if (entity.cannotPickup())
+        var candidates = world.getEntitiesOfClass(ItemEntity.class, box, entity -> {
+            if (entity.hasPickUpDelay())
                 return false;
-            if (excludedId != null && entity.getUuid().equals(excludedId))
+            if (excludedId != null && entity.getUUID().equals(excludedId))
                 return false;
-            if (!ItemStack.areItemsAndComponentsEqual(entity.getStack(), carried))
+            if (!ItemStack.isSameItemSameComponents(entity.getItem(), carried))
                 return false;
-            return Helpers.getDronePath(world, pos, entity.getPos().add(0, 0.5, 0)).isReachable();
+            return Helpers.getDronePath(world, pos, entity.position().add(0, 0.5, 0)).isReachable();
         });
         if (candidates.isEmpty()) return Optional.empty();
-        candidates.sort(Comparator.comparingDouble(e -> e.getPos().distanceTo(pos)));
+        candidates.sort(Comparator.comparingDouble(e -> e.position().distanceTo(pos)));
         return Optional.of(candidates.getFirst());
     }
 
-    public static Optional<ItemEntity> GetPickupTarget(PlayerEntity player, @Nullable UUID excludedItemId, Vec3d dronePos) {
-        var world = player.getWorld();
-        var origin = player.getEyePos();
+    public static Optional<ItemEntity> GetPickupTarget(Player player, @Nullable UUID excludedItemId, Vec3 dronePos) {
+        var world = player.level();
+        var origin = player.getEyePosition();
         var range = MAX_RANGE / 2;
-        var box = new Box(origin.x - range, origin.y - range, origin.z - range, origin.x + range, origin.y + range,
+        var box = new AABB(origin.x - range, origin.y - range, origin.z - range, origin.x + range, origin.y + range,
                 origin.z + range);
-        var items = world.getEntitiesByClass(ItemEntity.class, box, entity -> {
-            if (entity.cannotPickup())
+        var items = world.getEntitiesOfClass(ItemEntity.class, box, entity -> {
+            if (entity.hasPickUpDelay())
                 return false;
-            if (excludedItemId != null && entity.getUuid().equals(excludedItemId))
+            if (excludedItemId != null && entity.getUUID().equals(excludedItemId))
                 return false;
-            return Helpers.getDronePath(world, dronePos, entity.getPos().add(0, 0.5, 0)).isReachable();
+            return Helpers.getDronePath(world, dronePos, entity.position().add(0, 0.5, 0)).isReachable();
         });
         return items.isEmpty() ? Optional.empty() : Optional.of(items.getFirst());
     }
@@ -236,7 +237,7 @@ public class PickupBehaviour implements DroneBehaviour {
         }
 
         @Override
-        public boolean sense(DroneServerData drone, PlayerEntity player) {
+        public boolean sense(DroneServerData drone, Player player) {
             // If already carrying, resume delivery
             if (!drone.carriedItem.isEmpty()) {
                 drone.setCurrentTask(new PickupBehaviour(player, drone));
@@ -254,12 +255,12 @@ public class PickupBehaviour implements DroneBehaviour {
 
     public static boolean isValid(RecordedBlock block, HashMap<Vec3i, BlockState> frame) {
         // is valid when facing down and not blocked
-        var blockMatches = block.state().isIn(TagContent.PICKUP_TOOLS);
+        var blockMatches = block.state().is(TagContent.PICKUP_TOOLS);
         if (!blockMatches) return false;
 
         // ensure dir is free
         for (int i = 1; i < 8; i++) {
-            if (frame.containsKey(block.localPos().down(i))) return false;
+            if (frame.containsKey(block.localPos().below(i))) return false;
         }
 
         return true;

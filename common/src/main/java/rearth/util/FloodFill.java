@@ -1,18 +1,17 @@
 package rearth.util;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class FloodFill {
     
-    public static List<BlockPos> Run(World world, BlockPos start, Predicate<BlockState> filter, Predicate<BlockPos> positionFilter, int maxCount, boolean allowDiagonal) {
+    public static List<BlockPos> Run(Level world, BlockPos start, Predicate<BlockState> filter, Predicate<BlockPos> positionFilter, int maxCount, boolean allowDiagonal) {
         
         var checked = new HashSet<BlockPos>();
         var results = new ArrayList<BlockPos>();
@@ -51,15 +50,15 @@ public class FloodFill {
     }
     
     public static BlockPos[] GetNeighbors(BlockPos from) {
-        return new BlockPos[] {from.up(), from.down(), from.north(), from.east(), from.south(), from.west()};
+        return new BlockPos[] {from.above(), from.below(), from.north(), from.east(), from.south(), from.west()};
     }
     
     public static BlockPos[] GetNeighborsDiagonal(BlockPos from) {
-        return new BlockPos[] {from.up(), from.down(),
+        return new BlockPos[] {from.above(), from.below(),
           from.north(), from.east(), from.south(), from.west(),
           from.north().east(), from.east().south(), from.south().west(), from.west().north(),
-          from.north().up(), from.east().up(), from.south().up(), from.west().up(),
-          from.north().down(), from.east().down(), from.south().down(), from.west().down()
+          from.north().above(), from.east().above(), from.south().above(), from.west().above(),
+          from.north().below(), from.east().below(), from.south().below(), from.west().below()
         };
     }
     

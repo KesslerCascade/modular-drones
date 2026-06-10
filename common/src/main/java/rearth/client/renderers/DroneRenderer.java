@@ -1,37 +1,46 @@
 package rearth.client.renderers;
 
-import net.minecraft.block.BlockEntityProvider;
-import net.minecraft.block.Blocks;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.WorldRenderer;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.RotationAxis;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 import rearth.DronesClient;
 import rearth.drone.DroneController;
+import rearth.drone.DroneData;
+import rearth.drone.RecordedBlock;
+import rearth.init.NetworkContent.DroneMoveSyncPacket;
 import rearth.util.FloodFill;
 import rearth.util.Helpers;
-
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import java.util.HashMap;
+import java.util.Optional;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 public class DroneRenderer {
     
-    private static final HashMap<PlayerEntity, Vec3d> lastPositions = new HashMap<>();
-    private static final HashMap<PlayerEntity, Vec3d> lastRotations = new HashMap<>();
+    private static final HashMap<Player, Vec3> lastPositions = new HashMap<>();
+    private static final HashMap<Player, Vec3> lastRotations = new HashMap<>();
     
-    public static void doRender(MatrixStack matrices, Camera camera, VertexConsumerProvider vertexConsumers) {
-        var world = MinecraftClient.getInstance().world;
+    public static void doRender(PoseStack matrices, Camera camera, MultiBufferSource vertexConsumers) {
+        var world = Minecraft.getInstance().level;
         if (world == null) return;
         
-        for (var dronePlayer : world.getPlayers()) {
+        for (var dronePlayer : world.players()) {
             
             var droneCandidate = DroneController.getDroneOfPlayer(dronePlayer);
             if (droneCandidate.isEmpty()) continue;
@@ -42,7 +51,7 @@ public class DroneRenderer {
             if (movementData == null) return;
             
             // Scale interpolation factor based on frame time
-            var frameTimeTicks = MinecraftClient.getInstance().getRenderTickCounter().getLastFrameDuration();
+            var frameTimeTicks = Minecraft.getInstance().getTimer().getGameTimeDeltaTicks();
             var ftScale = frameTimeTicks * 3.0;
             
             var targetScale = 0.15f * droneData.getRenderScale();
@@ -58,7 +67,7 @@ public class DroneRenderer {
             if (altRotDistY < rotDistY && Math.abs(lastRot.y) > 90) {
                 var positive = lastRot.y > 0;
                 var adjustedY = positive ? lastRot.y - 360 : lastRot.y + 360;
-                lastRot = new Vec3d(lastRot.x, adjustedY, lastRot.z);
+                lastRot = new Vec3(lastRot.x, adjustedY, lastRot.z);
             }
             
             var posAlpha = (float) (1.0 - Math.pow(0.9, ftScale));
@@ -79,83 +88,83 @@ public class DroneRenderer {
             var deltaDroneRot = Helpers.lerp(lastRot, newRot, rotFactor);
             lastRotations.put(dronePlayer, deltaDroneRot);
             
-            matrices.push();
-            matrices.translate(-camera.getPos().x, -camera.getPos().y, -camera.getPos().z);
+            matrices.pushPose();
+            matrices.translate(-camera.getPosition().x, -camera.getPosition().y, -camera.getPosition().z);
             matrices.translate(deltaDronePos.x, deltaDronePos.y, deltaDronePos.z);
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees((float) -deltaDroneRot.x));
-            matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees((float) -deltaDroneRot.z));
-            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees((float) -deltaDroneRot.y));
+            matrices.mulPose(Axis.XP.rotationDegrees((float) -deltaDroneRot.x));
+            matrices.mulPose(Axis.ZP.rotationDegrees((float) -deltaDroneRot.z));
+            matrices.mulPose(Axis.YP.rotationDegrees((float) -deltaDroneRot.y));
             
             
             for (var blockData : droneData.getBlocks()) {
                 var localOffset = blockData.localPos();
                 var state = blockData.state();
                 
-                var scaledLocalOffset = Vec3d.of(localOffset).add(-0.5f, -0.5f, -0.5f).multiply(targetScale);
+                var scaledLocalOffset = Vec3.atLowerCornerOf(localOffset).add(-0.5f, -0.5f, -0.5f).scale(targetScale);
                 
-                matrices.push();
+                matrices.pushPose();
                 matrices.translate(scaledLocalOffset.x, scaledLocalOffset.y, scaledLocalOffset.z);
                 matrices.scale(targetScale, targetScale, targetScale);
 
                 // beacon faces up by default; rotate it around its center to face the drone's forward direction
                 if (state.getBlock() == Blocks.BEACON) {
                     matrices.translate(0.5, 0.5, 0.5);
-                    matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90));
+                    matrices.mulPose(Axis.XP.rotationDegrees(90));
                     matrices.translate(-0.5, -0.5, -0.5);
                 }
 
-                var light = getMaxLight(BlockPos.ofFloored(movementData.position()), world);
+                var light = getMaxLight(BlockPos.containing(movementData.position()), world);
                 
                 // render baked / animated block
-                MinecraftClient.getInstance().getBlockRenderManager().renderBlockAsEntity(
+                Minecraft.getInstance().getBlockRenderer().renderSingleBlock(
                   state,
                   matrices,
                   vertexConsumers,
-                  light, OverlayTexture.DEFAULT_UV
+                  light, OverlayTexture.NO_OVERLAY
                 );
                 
                 // render optional custom entity renderer
-                if (state.getBlock() instanceof BlockEntityProvider blockEntityProvider) {
-                    var blockEntity = blockEntityProvider.createBlockEntity(new BlockPos(localOffset), state);
-                    blockEntity.setWorld(world);
-                    var renderer = MinecraftClient.getInstance().getBlockEntityRenderDispatcher().get(blockEntity);
+                if (state.getBlock() instanceof EntityBlock blockEntityProvider) {
+                    var blockEntity = blockEntityProvider.newBlockEntity(new BlockPos(localOffset), state);
+                    blockEntity.setLevel(world);
+                    var renderer = Minecraft.getInstance().getBlockEntityRenderDispatcher().getRenderer(blockEntity);
                     if (renderer != null) {
-                        renderer.render(blockEntity, 0, matrices, vertexConsumers, light, OverlayTexture.DEFAULT_UV);
+                        renderer.render(blockEntity, 0, matrices, vertexConsumers, light, OverlayTexture.NO_OVERLAY);
                     }
                 }
                 
-                matrices.pop();
+                matrices.popPose();
             }
             
             // render carried item below drone center
             var carriedItem = DronesClient.CARRIED_ITEMS.get(droneData.getDroneId());
             if (carriedItem != null && !carriedItem.isEmpty()) {
-                matrices.push();
+                matrices.pushPose();
                 matrices.translate(0, -0.5, 0);
-                var itemLight = getMaxLight(BlockPos.ofFloored(movementData.position()), world);
-                MinecraftClient.getInstance().getItemRenderer().renderItem(
+                var itemLight = getMaxLight(BlockPos.containing(movementData.position()), world);
+                Minecraft.getInstance().getItemRenderer().renderStatic(
                   carriedItem,
-                  ModelTransformationMode.GROUND,
+                  ItemDisplayContext.GROUND,
                   itemLight,
-                  OverlayTexture.DEFAULT_UV,
+                  OverlayTexture.NO_OVERLAY,
                   matrices,
                   vertexConsumers,
                   world,
                   0
                 );
-                matrices.pop();
+                matrices.popPose();
             }
             
-            matrices.pop();
+            matrices.popPose();
         }
         
     }
     
-    private static int getMaxLight(BlockPos center, World world) {
-        var bestLight = WorldRenderer.getLightmapCoordinates(world, center);
+    private static int getMaxLight(BlockPos center, Level world) {
+        var bestLight = LevelRenderer.getLightColor(world, center);
         
         for (var side : FloodFill.GetNeighbors(center)) {
-            var candidate = WorldRenderer.getLightmapCoordinates(world, side);
+            var candidate = LevelRenderer.getLightColor(world, side);
             bestLight = Math.max(candidate, bestLight);
         }
         

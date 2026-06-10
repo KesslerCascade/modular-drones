@@ -2,7 +2,7 @@ package rearth.fabric;
 
 import net.fabricmc.fabric.api.datagen.v1.DataGeneratorEntrypoint;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
-import net.minecraft.recipe.Recipe;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator.Pack;
 import rearth.fabric.datagen.BlockLootGenerator;
 import rearth.fabric.datagen.BlockTagGenerator;
 import rearth.fabric.datagen.ModelGenerator;

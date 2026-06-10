@@ -2,7 +2,6 @@ package rearth;
 
 import dev.architectury.event.events.common.PlayerEvent;
 import dev.architectury.event.events.common.TickEvent;
-import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rearth.drone.DroneController;
@@ -11,6 +10,7 @@ import rearth.init.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.resources.ResourceLocation;
 
 public final class Drones {
     public static final String MOD_ID = "drones";
@@ -18,8 +18,8 @@ public final class Drones {
     
     public static final List<Runnable> DELAYED_ACTIONS = new ArrayList<>();
     
-    public static Identifier id(String path) {
-        return Identifier.of(MOD_ID, path);
+    public static ResourceLocation id(String path) {
+        return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
     }
 
     public static void init() {
@@ -32,8 +32,8 @@ public final class Drones {
         ComponentContent.COMPONENT_TYPES.register();
         ItemGroups.TABS.register();
         
-        TickEvent.SERVER_POST.register(event -> event.getWorlds().forEach(world -> world.getPlayers().forEach(DroneController::tickPlayer)));
-        TickEvent.SERVER_PRE.register(event -> event.getWorlds().forEach(DroneLight::removeOldLights));
+        TickEvent.SERVER_POST.register(event -> event.getAllLevels().forEach(world -> world.players().forEach(DroneController::tickPlayer)));
+        TickEvent.SERVER_PRE.register(event -> event.getAllLevels().forEach(DroneLight::removeOldLights));
         TickEvent.SERVER_POST.register(event -> {
             DELAYED_ACTIONS.forEach(Runnable::run);
             DELAYED_ACTIONS.clear();

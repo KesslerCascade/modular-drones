@@ -5,19 +5,20 @@ import dev.architectury.networking.NetworkManager;
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.Env;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
 import rearth.Drones;
 import rearth.DronesClient;
 import rearth.blocks.controller.ControllerBlockEntity;
 import rearth.util.Helpers;
 
 import java.util.List;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 public class NetworkContent {
     
@@ -37,7 +38,7 @@ public class NetworkContent {
         
         NetworkContent.registerC2S(ControllerBlockEntity.AssembleDronePacket.PAYLOAD_ID, ControllerBlockEntity.AssembleDronePacket.PACKET_CODEC, (((value, context) -> {
             
-            var world = context.getPlayer().getWorld();
+            var world = context.getPlayer().level();
             var player = context.getPlayer();
             var candidate = world.getBlockEntity(value.controllerPos(), BlockEntitiesContent.ASSEMBLER_CONTROLLER.get());
             candidate.ifPresent(controllerBlockEntity -> controllerBlockEntity.assembleDrone(player, value.name()));
@@ -46,9 +47,9 @@ public class NetworkContent {
         
     }
     
-    private static <T extends CustomPayload> void registerS2C(
-      CustomPayload.Id<T> dataPayloadId,
-      PacketCodec<ByteBuf, T> packetCodec,
+    private static <T extends CustomPacketPayload> void registerS2C(
+      CustomPacketPayload.Type<T> dataPayloadId,
+      StreamCodec<ByteBuf, T> packetCodec,
       NetworkManager.NetworkReceiver<T> receiver) {
         
         if (Platform.getEnvironment().equals(Env.SERVER)) {
@@ -59,61 +60,61 @@ public class NetworkContent {
         
     }
     
-    private static <T extends CustomPayload> void registerC2S(
-      CustomPayload.Id<T> dataPayloadId,
-      PacketCodec<ByteBuf, T> packetCodec,
+    private static <T extends CustomPacketPayload> void registerC2S(
+      CustomPacketPayload.Type<T> dataPayloadId,
+      StreamCodec<ByteBuf, T> packetCodec,
       NetworkManager.NetworkReceiver<T> receiver) {
         
         NetworkManager.registerReceiver(NetworkManager.Side.C2S, dataPayloadId, packetCodec, receiver);
         
     }
     
-    public record OpenDroneScreenPacket(BlockPos controllerPos) implements CustomPayload {
+    public record OpenDroneScreenPacket(BlockPos controllerPos) implements CustomPacketPayload {
         
-        public static final CustomPayload.Id<OpenDroneScreenPacket> PAYLOAD_ID = new CustomPayload.Id<>(Drones.id("open_screen"));
+        public static final CustomPacketPayload.Type<OpenDroneScreenPacket> PAYLOAD_ID = new CustomPacketPayload.Type<>(Drones.id("open_screen"));
         
-        public static final PacketCodec<ByteBuf, OpenDroneScreenPacket> PACKET_CODEC = PacketCodec.tuple(
-          BlockPos.PACKET_CODEC,
+        public static final StreamCodec<ByteBuf, OpenDroneScreenPacket> PACKET_CODEC = StreamCodec.composite(
+          BlockPos.STREAM_CODEC,
           OpenDroneScreenPacket::controllerPos,
           OpenDroneScreenPacket::new
         );
         
         @Override
-        public Id<? extends CustomPayload> getId() {
+        public Type<? extends CustomPacketPayload> type() {
             return PAYLOAD_ID;
         }
     }
     
     
-    public record DroneMoveSyncPacket(Vec3d position, Vec3d rotation, int droneId) implements CustomPayload {
+    public record DroneMoveSyncPacket(Vec3 position, Vec3 rotation, int droneId) implements CustomPacketPayload {
         
-        public static final CustomPayload.Id<DroneMoveSyncPacket> PAYLOAD_ID = new CustomPayload.Id<>(Drones.id("move"));
+        public static final CustomPacketPayload.Type<DroneMoveSyncPacket> PAYLOAD_ID = new CustomPacketPayload.Type<>(Drones.id("move"));
         
-        public static final PacketCodec<ByteBuf, DroneMoveSyncPacket> PACKET_CODEC = PacketCodec.tuple(
+        public static final StreamCodec<ByteBuf, DroneMoveSyncPacket> PACKET_CODEC = StreamCodec.composite(
           Helpers.VEC3D_PACKET_CODEC, DroneMoveSyncPacket::position,
           Helpers.VEC3D_PACKET_CODEC, DroneMoveSyncPacket::rotation,
-          PacketCodecs.INTEGER, DroneMoveSyncPacket::droneId,
+          ByteBufCodecs.INT, DroneMoveSyncPacket::droneId,
           DroneMoveSyncPacket::new
         );
         
         @Override
-        public Id<? extends CustomPayload> getId() {
+        public Type<? extends CustomPacketPayload> type() {
             return PAYLOAD_ID;
         }
     }
     
-    public record DroneCarriedItemPacket(int droneId, ItemStack carriedItem) implements CustomPayload {
+    public record DroneCarriedItemPacket(int droneId, ItemStack carriedItem) implements CustomPacketPayload {
 
-        public static final CustomPayload.Id<DroneCarriedItemPacket> PAYLOAD_ID = new CustomPayload.Id<>(
+        public static final CustomPacketPayload.Type<DroneCarriedItemPacket> PAYLOAD_ID = new CustomPacketPayload.Type<>(
                 Drones.id("carried_item"));
 
-        public static final PacketCodec<RegistryByteBuf, DroneCarriedItemPacket> PACKET_CODEC = PacketCodec.tuple(
-                PacketCodecs.INTEGER, DroneCarriedItemPacket::droneId,
-                ItemStack.OPTIONAL_PACKET_CODEC, DroneCarriedItemPacket::carriedItem,
+        public static final StreamCodec<RegistryFriendlyByteBuf, DroneCarriedItemPacket> PACKET_CODEC = StreamCodec.composite(
+                ByteBufCodecs.INT, DroneCarriedItemPacket::droneId,
+                ItemStack.OPTIONAL_STREAM_CODEC, DroneCarriedItemPacket::carriedItem,
                 DroneCarriedItemPacket::new);
 
         @Override
-        public Id<? extends CustomPayload> getId() {
+        public Type<? extends CustomPacketPayload> type() {
             return PAYLOAD_ID;
         }
     }

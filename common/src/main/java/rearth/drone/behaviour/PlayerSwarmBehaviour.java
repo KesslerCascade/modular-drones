@@ -1,21 +1,23 @@
 package rearth.drone.behaviour;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
 import rearth.drone.DroneServerData;
 import rearth.util.Helpers;
 
 import static rearth.drone.DroneController.SIMPLEX;
+
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 public class PlayerSwarmBehaviour implements DroneBehaviour {
 
     private static final float SWARM_RANGE = 5.0f;
 
     private final DroneServerData drone;
-    private final PlayerEntity owner;
+    private final Player owner;
 
-    public PlayerSwarmBehaviour(DroneServerData drone, PlayerEntity owner) {
+    public PlayerSwarmBehaviour(DroneServerData drone, Player owner) {
         this.drone = drone;
         this.owner = owner;
     }
@@ -27,10 +29,10 @@ public class PlayerSwarmBehaviour implements DroneBehaviour {
             drone.setCurrentTask(null);
         }
 
-        var distToPlayer = drone.currentPosition.distanceTo(owner.getEyePos());
+        var distToPlayer = drone.currentPosition.distanceTo(owner.getEyePosition());
 
         if (distToPlayer > SWARM_RANGE) {
-            drone.setTarget(owner.getWorld(), getIdlePositionTarget());
+            drone.setTarget(owner.level(), getIdlePositionTarget());
         } else {
             drone.currentTargetPosition = getIdlePositionTarget();
             drone.nextTargetPosition = null;
@@ -39,11 +41,11 @@ public class PlayerSwarmBehaviour implements DroneBehaviour {
     
     @Override
     public float getCurrentYaw() {
-        var playerDist = drone.currentPosition.distanceTo(owner.getEyePos());
+        var playerDist = drone.currentPosition.distanceTo(owner.getEyePosition());
         if (playerDist > 5) {
-            return Helpers.calculateYaw(drone.currentPosition, owner.getEyePos());
+            return Helpers.calculateYaw(drone.currentPosition, owner.getEyePosition());
         }
-        return owner.headYaw;
+        return owner.yHeadRot;
     }
     
     @Override
@@ -52,42 +54,42 @@ public class PlayerSwarmBehaviour implements DroneBehaviour {
     }
     
     // override to provide a preferred position that will be tried before the overhead noise positions
-    public Vec3d getDesiredPosition() {
+    public Vec3 getDesiredPosition() {
         return null;
     }
 
     // circles overhead in a random manner, with slight Y variations.
     // falls back to a fixed overhead then a behind-player position if the
     // noise-driven spot is inside a block.
-    public Vec3d getIdlePositionTarget() {
-        var world = owner.getWorld();
-        var playerHead = owner.getEyePos();
+    public Vec3 getIdlePositionTarget() {
+        var world = owner.level();
+        var playerHead = owner.getEyePosition();
         var overheadCenter = playerHead.add(0, 0.5f, 0);
 
-        var playerYaw = Math.toRadians(owner.headYaw - 90);
-        var playerBackDir = new Vec3d(Math.cos(playerYaw), 0, Math.sin(playerYaw)).normalize();
+        var playerYaw = Math.toRadians(owner.yHeadRot - 90);
+        var playerBackDir = new Vec3(Math.cos(playerYaw), 0, Math.sin(playerYaw)).normalize();
         
-        var time = world.getTime();
+        var time = world.getGameTime();
         var sampledX = time / 100f;
         
-        var x = SIMPLEX.sample(sampledX, 0);
-        var y = SIMPLEX.sample(sampledX, 5000);
-        var z = SIMPLEX.sample(sampledX + 5000, 5000);
+        var x = SIMPLEX.getValue(sampledX, 0);
+        var y = SIMPLEX.getValue(sampledX, 5000);
+        var z = SIMPLEX.getValue(sampledX + 5000, 5000);
 
         var desired = getDesiredPosition();
         if (desired != null) {
-            var noisyDesired = desired.add(new Vec3d(x * 0.5, y / 6, z * 0.5));
+            var noisyDesired = desired.add(new Vec3(x * 0.5, y / 6, z * 0.5));
             if (isPositionClearRadius(noisyDesired, 0.5))
                 return noisyDesired;
             if (isPositionClearRadius(desired, 0.5))
                 return desired;
         }
         
-        var noiseOverhead = overheadCenter.add(new Vec3d(x, y / 3, z)).add(playerBackDir.multiply(0.9f));
+        var noiseOverhead = overheadCenter.add(new Vec3(x, y / 3, z)).add(playerBackDir.scale(0.9f));
         if (isPositionClearRadius(noiseOverhead, 0.5))
             return noiseOverhead;
 
-        var fixedOverhead = playerHead.add(0, 1.2f, 0).add(playerBackDir.multiply(0.9f));
+        var fixedOverhead = playerHead.add(0, 1.2f, 0).add(playerBackDir.scale(0.9f));
         if (isPositionClearRadius(fixedOverhead, 0.3))
             return fixedOverhead;
 
@@ -95,7 +97,7 @@ public class PlayerSwarmBehaviour implements DroneBehaviour {
         if (isPositionClearRadius(directlyOverhead, 0.15))
             return directlyOverhead;
 
-        var behindPlayer = owner.getPos().add(0, 0.9, 0).add(playerBackDir.multiply(2.0f));
+        var behindPlayer = owner.position().add(0, 0.9, 0).add(playerBackDir.scale(2.0f));
         if (isPositionClearRadius(behindPlayer, 0.15))
             return behindPlayer;
 
@@ -103,9 +105,9 @@ public class PlayerSwarmBehaviour implements DroneBehaviour {
     }
 
     // checks a box of the given radius around pos for any solid collision shape
-    private boolean isPositionClearRadius(Vec3d pos, double radius) {
-        var box = new Box(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius,
+    private boolean isPositionClearRadius(Vec3 pos, double radius) {
+        var box = new AABB(pos.x - radius, pos.y - radius, pos.z - radius, pos.x + radius, pos.y + radius,
                 pos.z + radius);
-        return owner.getWorld().isSpaceEmpty(box);
+        return owner.level().noCollision(box);
     }
 }

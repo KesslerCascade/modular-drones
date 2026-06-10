@@ -1,38 +1,38 @@
 package rearth.drone;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import rearth.drone.behaviour.DroneBehaviour;
 import rearth.drone.behaviour.PlayerSwarmBehaviour;
 import rearth.util.Helpers;
-
+import rearth.util.Helpers.DronePathResult;
 import java.util.UUID;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 public class DroneServerData {
     private static final int MIN_INTERRUPT_TICKS = 40;
     public static final float ACCELERATION_RAMP_STEP = 0.15f;
 
     // synced to client
-    public @NotNull Vec3d currentPosition;
-    public @NotNull Vec3d currentRotation;  // y is vertical, z is forward, x is right
+    public @NotNull Vec3 currentPosition;
+    public @NotNull Vec3 currentRotation;  // y is vertical, z is forward, x is right
     
     // not synced
-    public @NotNull Vec3d currentTargetPosition = Vec3d.ZERO;
-    public @Nullable Vec3d nextTargetPosition = null;
-    public @NotNull Vec3d currentVelocity = Vec3d.ZERO;
-    public @NotNull Vec3d recoilVelocity = Vec3d.ZERO;
+    public @NotNull Vec3 currentTargetPosition = Vec3.ZERO;
+    public @Nullable Vec3 nextTargetPosition = null;
+    public @NotNull Vec3 currentVelocity = Vec3.ZERO;
+    public @NotNull Vec3 recoilVelocity = Vec3.ZERO;
     private @Nullable DroneBehaviour currentTask = null;
     public int ghostTicks = 0;
     public int ghostWaitTime = 0;
     public int actionCooldown = 0;
     public int taskCooldown = 0;
     public float accelerationRamp = ACCELERATION_RAMP_STEP;
-    public @Nullable Vec3d lastTargetPosition = null;
+    public @Nullable Vec3 lastTargetPosition = null;
     
     // pickup inventory
     public @NotNull ItemStack carriedItem = ItemStack.EMPTY;
@@ -42,10 +42,10 @@ public class DroneServerData {
 
     public final @NotNull DroneData droneData;
     
-    public DroneServerData(DroneData droneData, ServerPlayerEntity player) {
+    public DroneServerData(DroneData droneData, ServerPlayer player) {
         this.droneData = droneData;
-        this.currentPosition = player.getEyePos();
-        this.currentRotation = Vec3d.ZERO;
+        this.currentPosition = player.getEyePosition();
+        this.currentRotation = Vec3.ZERO;
         this.currentTask = new PlayerSwarmBehaviour(this, player);
     }
     
@@ -61,7 +61,7 @@ public class DroneServerData {
         this.taskCooldown = MIN_INTERRUPT_TICKS;
     }
 
-    public void setTarget(World world, Vec3d finalTarget) {
+    public void setTarget(Level world, Vec3 finalTarget) {
         var result = Helpers.getDronePath(world, currentPosition, finalTarget);
         switch (result.status()) {
             case DIRECT, NO_PATH -> { currentTargetPosition = finalTarget; nextTargetPosition = null; }
@@ -69,7 +69,7 @@ public class DroneServerData {
         }
     }
 
-    public void setIdle(PlayerEntity player, DroneServerData serverData) {
+    public void setIdle(Player player, DroneServerData serverData) {
         if (this.currentTask != null) {
             this.currentTask.onStopped();
         }

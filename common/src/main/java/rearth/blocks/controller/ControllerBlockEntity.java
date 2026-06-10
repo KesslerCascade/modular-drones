@@ -1,23 +1,6 @@
 package rearth.blocks.controller;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import rearth.Drones;
 import rearth.drone.DroneData;
@@ -31,6 +14,24 @@ import rearth.util.FloodFill;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 public class ControllerBlockEntity extends BlockEntity {
     
@@ -49,7 +50,7 @@ public class ControllerBlockEntity extends BlockEntity {
         
         if (frameStart.isEmpty()) return List.of();
         
-        var frameBlocks = FloodFill.Run(world, frameStart.get(), candidate -> candidate.isOf(BlockContent.ASSEMBLER_FRAME), checkPos -> true, 200, false);
+        var frameBlocks = FloodFill.Run(level, frameStart.get(), candidate -> candidate.is(BlockContent.ASSEMBLER_FRAME), checkPos -> true, 200, false);
         
         if (frameBlocks.isEmpty()) return List.of();
         
@@ -63,8 +64,8 @@ public class ControllerBlockEntity extends BlockEntity {
         
         BlockPos droneStart = null;
         for (var frameBlock : frameBlocks) {
-            var frameAbove = frameBlock.up();
-            var candidateState = world.getBlockState(frameAbove);
+            var frameAbove = frameBlock.above();
+            var candidateState = level.getBlockState(frameAbove);
             if (isValidDroneBlock(candidateState)) {
                 droneStart = frameAbove;
                 break;
@@ -73,20 +74,20 @@ public class ControllerBlockEntity extends BlockEntity {
         
         if (droneStart == null) return null;
         
-        var droneBlocks = FloodFill.Run(world, droneStart, ControllerBlockEntity::isValidDroneBlock, this::isAboveOwnFrame, 1000, true);
+        var droneBlocks = FloodFill.Run(level, droneStart, ControllerBlockEntity::isValidDroneBlock, this::isAboveOwnFrame, 1000, true);
         var droneCenter = findCenterOfMass(droneBlocks);
         System.out.println("drone: " + droneBlocks);
         
         var blockData = new ArrayList<RecordedBlock>();
         for (var blockPos : droneBlocks) {
-            var blockState = world.getBlockState(blockPos);
+            var blockState = level.getBlockState(blockPos);
             var localPos = blockPos.subtract(droneCenter);
             var data = new RecordedBlock(blockState, localPos);
             blockData.add(data);
         }
         
-        var droneId = world.getRandom().nextInt(Integer.MAX_VALUE);
-        var droneOffset = droneCenter.subtract(pos);
+        var droneId = level.getRandom().nextInt(Integer.MAX_VALUE);
+        var droneOffset = droneCenter.subtract(worldPosition);
         
         return new DroneData(blockData, droneId, droneOffset);
         // DroneController.PLAYER_DRONES.put(player.getName(), droneData);
@@ -97,8 +98,8 @@ public class ControllerBlockEntity extends BlockEntity {
         
         var maxRange = 20;
         for (int i = 1; i <= maxRange; i++) {
-            var testPos = pos.down(i);
-            if (world.getBlockState(testPos).isOf(BlockContent.ASSEMBLER_FRAME)) return true;
+            var testPos = pos.below(i);
+            if (level.getBlockState(testPos).is(BlockContent.ASSEMBLER_FRAME)) return true;
         }
         
         return false;
@@ -108,7 +109,7 @@ public class ControllerBlockEntity extends BlockEntity {
     private static BlockPos findCenterOfMass(List<BlockPos> positions) {
         if (positions.isEmpty()) {
             Drones.LOGGER.warn("tried to find COM for empty drone");
-            return BlockPos.ORIGIN;
+            return BlockPos.ZERO;
         }
         
         var dataX = 0d;
@@ -116,19 +117,19 @@ public class ControllerBlockEntity extends BlockEntity {
         var dataZ = 0d;
         
         for (var pos : positions) {
-            var center = pos.toCenterPos();
+            var center = pos.getCenter();
             dataX += center.x;
             dataY += center.y;
             dataZ += center.z;
         }
         
-        var realCOM = new Vec3d(dataX / positions.size(), dataY / positions.size(), dataZ / positions.size());
-        return BlockPos.ofFloored(realCOM);
+        var realCOM = new Vec3(dataX / positions.size(), dataY / positions.size(), dataZ / positions.size());
+        return BlockPos.containing(realCOM);
     }
     
     private Optional<BlockPos> getPlatformStart() {
-        for (var neighbor : FloodFill.GetHorizontalNeighbors(pos)) {
-            if (world.getBlockState(neighbor).isOf(BlockContent.ASSEMBLER_FRAME)) return Optional.of(neighbor);
+        for (var neighbor : FloodFill.GetHorizontalNeighbors(worldPosition)) {
+            if (level.getBlockState(neighbor).is(BlockContent.ASSEMBLER_FRAME)) return Optional.of(neighbor);
         }
         
         return Optional.empty();
@@ -142,23 +143,23 @@ public class ControllerBlockEntity extends BlockEntity {
         // fails if any blocks are occupied
         for (var droneBlockData : data.getBlocks()) {
             var offset = droneBlockData.localPos();
-            var worldPos = this.pos.add(data.getAssemblerOffset()).add(offset);
+            var worldPos = this.worldPosition.offset(data.getAssemblerOffset()).offset(offset);
             if (!isAboveOwnFrame(worldPos)) return false;
-            var worldState = world.getBlockState(worldPos);
+            var worldState = level.getBlockState(worldPos);
             if (!worldState.isAir()) return false;
         }
         
-        world.playSound(null, pos, SoundEvents.BLOCK_SHROOMLIGHT_PLACE, SoundCategory.BLOCKS, 1f, 1f);
+        level.playSound(null, worldPosition, SoundEvents.SHROOMLIGHT_PLACE, SoundSource.BLOCKS, 1f, 1f);
         
         for (var droneBlockData : data.getBlocks()) {
             var offset = droneBlockData.localPos();
-            var worldPos = this.pos.add(data.getAssemblerOffset()).add(offset);
-            world.setBlockState(worldPos, droneBlockData.state());
+            var worldPos = this.worldPosition.offset(data.getAssemblerOffset()).offset(offset);
+            level.setBlockAndUpdate(worldPos, droneBlockData.state());
             
             
-            if (world instanceof ServerWorld serverWorld) {
-                var spawnAt = worldPos.toCenterPos();
-                serverWorld.spawnParticles(ParticleTypes.GUST, spawnAt.x, spawnAt.y, spawnAt.z, 1, 0, 0.1f, 0, 0.5f);
+            if (level instanceof ServerLevel serverWorld) {
+                var spawnAt = worldPos.getCenter();
+                serverWorld.sendParticles(ParticleTypes.GUST, spawnAt.x, spawnAt.y, spawnAt.z, 1, 0, 0.1f, 0, 0.5f);
             }
         }
         
@@ -167,11 +168,11 @@ public class ControllerBlockEntity extends BlockEntity {
     }
     
     private static boolean isValidDroneBlock(BlockState state) {
-        return !state.isAir() && !state.isLiquid() && !state.isOf(BlockContent.ASSEMBLER_FRAME) && !state.isOf(BlockContent.ASSEMBLER_CONTROLLER);
+        return !state.isAir() && !state.liquid() && !state.is(BlockContent.ASSEMBLER_FRAME) && !state.is(BlockContent.ASSEMBLER_CONTROLLER);
     }
     
     // this is called on the server, after the player has clicked the "assemble" button
-    public void assembleDrone(PlayerEntity player, String name) {
+    public void assembleDrone(Player player, String name) {
         
         Drones.LOGGER.info("Assembling drone for: {}, drone name: {}", player.getName(), name);
         
@@ -182,20 +183,20 @@ public class ControllerBlockEntity extends BlockEntity {
         }
         
         var createdStack = new ItemStack(ItemContent.POCKET_DRONE);
-        createdStack.set(DataComponentTypes.CUSTOM_NAME, Text.literal(name));
+        createdStack.set(DataComponents.CUSTOM_NAME, Component.literal(name));
         createdStack.set(ComponentContent.DRONE_DATA_TYPE.get(), droneData);
         
-        var itemEntity = new ItemEntity(world, player.getX(), player.getY(), player.getZ(), createdStack);
-        world.spawnEntity(itemEntity);
+        var itemEntity = new ItemEntity(level, player.getX(), player.getY(), player.getZ(), createdStack);
+        level.addFreshEntity(itemEntity);
         
         // remove blocks
         for (var droneBlock : droneData.getBlocks()) {
-            var worldPos = this.pos.add(droneData.getAssemblerOffset()).add(droneBlock.localPos());
-            world.setBlockState(worldPos, Blocks.AIR.getDefaultState());
+            var worldPos = this.worldPosition.offset(droneData.getAssemblerOffset()).offset(droneBlock.localPos());
+            level.setBlockAndUpdate(worldPos, Blocks.AIR.defaultBlockState());
             
-            if (world instanceof ServerWorld serverWorld) {
-                var spawnAt = worldPos.toCenterPos();
-                serverWorld.spawnParticles(ParticleTypes.GUST, spawnAt.x, spawnAt.y, spawnAt.z, 1, 0, 0.1f, 0, 0.5f);
+            if (level instanceof ServerLevel serverWorld) {
+                var spawnAt = worldPos.getCenter();
+                serverWorld.sendParticles(ParticleTypes.GUST, spawnAt.x, spawnAt.y, spawnAt.z, 1, 0, 0.1f, 0, 0.5f);
             }
             
         }
@@ -203,20 +204,20 @@ public class ControllerBlockEntity extends BlockEntity {
     }
     
     // C2S packet, contains the given name and controller pos
-    public record AssembleDronePacket(String name, BlockPos controllerPos) implements CustomPayload {
+    public record AssembleDronePacket(String name, BlockPos controllerPos) implements CustomPacketPayload {
         
-        public static final CustomPayload.Id<AssembleDronePacket> PAYLOAD_ID = new CustomPayload.Id<>(Drones.id("assemble"));
+        public static final CustomPacketPayload.Type<AssembleDronePacket> PAYLOAD_ID = new CustomPacketPayload.Type<>(Drones.id("assemble"));
         
-        public static final PacketCodec<ByteBuf, AssembleDronePacket> PACKET_CODEC = PacketCodec.tuple(
-          PacketCodecs.STRING,
+        public static final StreamCodec<ByteBuf, AssembleDronePacket> PACKET_CODEC = StreamCodec.composite(
+          ByteBufCodecs.STRING_UTF8,
           AssembleDronePacket::name,
-          BlockPos.PACKET_CODEC,
+          BlockPos.STREAM_CODEC,
           AssembleDronePacket::controllerPos,
           AssembleDronePacket::new
         );
         
         @Override
-        public Id<? extends CustomPayload> getId() {
+        public Type<? extends CustomPacketPayload> type() {
             return PAYLOAD_ID;
         }
     }

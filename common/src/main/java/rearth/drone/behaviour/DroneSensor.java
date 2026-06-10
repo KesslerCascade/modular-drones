@@ -1,11 +1,11 @@
 package rearth.drone.behaviour;
 
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.entity.player.Player;
 import rearth.drone.DroneServerData;
 
 public interface DroneSensor {
     
     int getPriority();
-    boolean sense(DroneServerData drone, PlayerEntity player);    // returns true if something has been found
+    boolean sense(DroneServerData drone, Player player);    // returns true if something has been found
     
 }

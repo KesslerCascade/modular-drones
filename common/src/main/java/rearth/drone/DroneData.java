@@ -3,11 +3,6 @@ package rearth.drone;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.block.BlockState;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.util.dynamic.Codecs;
-import net.minecraft.util.math.Vec3i;
 import org.jetbrains.annotations.NotNull;
 import rearth.Drones;
 import rearth.drone.behaviour.*;
@@ -19,8 +14,14 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
+import net.minecraft.core.Vec3i;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.ExtraCodecs;
+import net.minecraft.world.level.block.state.BlockState;
 
 import static rearth.blocks.controller.ControllerBlockEntity.*;
+
 
 public class DroneData {
     
@@ -59,7 +60,7 @@ public class DroneData {
         for (var recordedBlock : blocks) {
             
             var state = recordedBlock.state();
-            if (!state.isIn(TagContent.THRUSTER_BLOCKS) && !state.isAir() && state.blocksMovement())
+            if (!state.is(TagContent.THRUSTER_BLOCKS) && !state.isAir() && state.blocksMotion())
                 weight += 2;
             
             thrust += getThrust(recordedBlock, droneFrame);
@@ -83,7 +84,7 @@ public class DroneData {
 //                abilities.add(DroneBehaviour.BlockFunctions.SAW);
 //            }
             
-            if (state.getLuminance() > 5) {
+            if (state.getLightEmission() > 5) {
                 abilities.add(DroneBehaviour.BlockFunctions.LIGHT);
             }
             
@@ -179,23 +180,23 @@ public class DroneData {
         
         // thrusters need to have 2 empty blocks below
         
-        var isThruster = block.state().isIn(TagContent.THRUSTER_BLOCKS);
+        var isThruster = block.state().is(TagContent.THRUSTER_BLOCKS);
         if (!isThruster) return 0;
         
-        var blocked = frame.containsKey(block.localPos().down()) || frame.containsKey(block.localPos().down(2));
+        var blocked = frame.containsKey(block.localPos().below()) || frame.containsKey(block.localPos().below(2));
         if (blocked) return 0;
         
         var state = block.state();
-        if (state.isIn(TagContent.LOW_THRUSTER)) {
+        if (state.is(TagContent.LOW_THRUSTER)) {
             return LOW_THRUSTER_POWER;
         }
-        if (state.isIn(TagContent.MEDIUM_THRUSTER)) {
+        if (state.is(TagContent.MEDIUM_THRUSTER)) {
             return MEDIUM_THRUSTER_POWER;
         }
-        if (state.isIn(TagContent.HIGH_THRUSTER)) {
+        if (state.is(TagContent.HIGH_THRUSTER)) {
             return HIGH_THRUSTER_POWER;
         }
-        if (state.isIn(TagContent.ULTRA_THRUSTER)) {
+        if (state.is(TagContent.ULTRA_THRUSTER)) {
             return ULTRA_THRUSTER_POWER;
         }
         
@@ -205,16 +206,16 @@ public class DroneData {
         
     }
     
-    public static PacketCodec<ByteBuf, DroneData> PACKET_CODEC = PacketCodec.tuple(
-      RecordedBlock.PACKET_CODEC.collect(PacketCodecs.toList()), DroneData::getBlocks,
-      PacketCodecs.INTEGER, DroneData::getDroneId,
+    public static StreamCodec<ByteBuf, DroneData> PACKET_CODEC = StreamCodec.composite(
+      RecordedBlock.PACKET_CODEC.apply(ByteBufCodecs.list()), DroneData::getBlocks,
+      ByteBufCodecs.INT, DroneData::getDroneId,
       Helpers.VEC3I_PACKET_CODEC, DroneData::getAssemblerOffset,
       DroneData::new
     );
     
     public static Codec<DroneData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
       RecordedBlock.CODEC.listOf().fieldOf("blocks").forGetter(DroneData::getBlocks),
-      Codecs.POSITIVE_INT.fieldOf("id").forGetter(DroneData::getDroneId),
+      ExtraCodecs.POSITIVE_INT.fieldOf("id").forGetter(DroneData::getDroneId),
       Vec3i.CODEC.fieldOf("offset").forGetter(DroneData::getAssemblerOffset)
       ).apply(instance, DroneData::new));
 }

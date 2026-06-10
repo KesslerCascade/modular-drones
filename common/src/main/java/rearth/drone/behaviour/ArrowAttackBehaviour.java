@@ -1,31 +1,31 @@
 package rearth.drone.behaviour;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.Monster;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.projectile.ArrowEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.RaycastContext;
-import net.minecraft.world.World;
 import rearth.drone.DroneServerData;
 import rearth.drone.RecordedBlock;
 import rearth.init.TagContent;
 import rearth.util.Helpers;
-
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
+import net.minecraft.core.Vec3i;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.EntitySelector;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Arrow;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 
 // an instance of a behaviour to attack one specific entity.
 // consists of 3 phases: move in, attack, move home
@@ -41,10 +41,10 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
     private final int assignedPriority;
 
     public final LivingEntity target;
-    public final PlayerEntity owner;
+    public final Player owner;
     public final DroneServerData drone;
 
-    public ArrowAttackBehaviour(LivingEntity target, PlayerEntity owner, DroneServerData drone, int priority) {
+    public ArrowAttackBehaviour(LivingEntity target, Player owner, DroneServerData drone, int priority) {
         super(drone, owner);
         this.target = target;
         this.owner = owner;
@@ -65,9 +65,9 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
             return;
         }
 
-        var toTarget = target.getEyePos().subtract(this.drone.currentPosition).normalize();
-        var shotFrom = this.drone.currentPosition.add(toTarget.multiply(0.5));
-        var dist = shotFrom.distanceTo(target.getEyePos());
+        var toTarget = target.getEyePosition().subtract(this.drone.currentPosition).normalize();
+        var shotFrom = this.drone.currentPosition.add(toTarget.scale(0.5));
+        var dist = shotFrom.distanceTo(target.getEyePosition());
         if (dist > MAX_RANGE) {
             finishTask();
             return;
@@ -88,54 +88,54 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
 
     }
 
-    static boolean hasLos(World world, Vec3d from, LivingEntity target) {
-        return Helpers.isLineAvailable(world, target.getEyePos(), from);
+    static boolean hasLos(Level world, Vec3 from, LivingEntity target) {
+        return Helpers.isLineAvailable(world, target.getEyePosition(), from);
     }
 
-    public boolean performAttack(double dist, Vec3d shotFrom) {
+    public boolean performAttack(double dist, Vec3 shotFrom) {
 
-        var world = owner.getWorld();
+        var world = owner.level();
         // for small mobs (babies etc.), aim at body center instead of eye to avoid overshooting the hitbox
-        var entityHeight = target.getBoundingBox().getLengthY();
-        var aimBase = entityHeight < 1.0 ? target.getPos().add(0, entityHeight * 0.5, 0) : target.getEyePos();
+        var entityHeight = target.getBoundingBox().getYsize();
+        var aimBase = entityHeight < 1.0 ? target.position().add(0, entityHeight * 0.5, 0) : target.getEyePosition();
         var targetPos = aimBase.add(0, dist / 10f, 0); // adjust target slightly up for longer distances to hit
 
         // abort if drone no longer has LOS to target (check both actual entity pos and adjusted aim pos)
-        var losContextAdjusted = new RaycastContext(drone.currentPosition, targetPos, RaycastContext.ShapeType.COLLIDER,
-                RaycastContext.FluidHandling.NONE, ShapeContext.absent());
+        var losContextAdjusted = new ClipContext(drone.currentPosition, targetPos, ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, CollisionContext.empty());
         if (!hasLos(world, drone.currentPosition, target)
-                || world.raycast(losContextAdjusted).getType() != HitResult.Type.MISS)
+                || world.clip(losContextAdjusted).getType() != HitResult.Type.MISS)
             return false;
 
         // abort if owner is in the line of fire (check both aim direction and landing
         // point to bracket the arc)
-        var ownerBox = owner.getBoundingBox().expand(0.3);
+        var ownerBox = owner.getBoundingBox().inflate(0.3);
         var aimDir = targetPos.subtract(shotFrom).normalize();
-        var landDir = target.getEyePos().subtract(shotFrom).normalize();
-        if (ownerBox.raycast(shotFrom, shotFrom.add(aimDir.multiply(dist + 5))).isPresent()
-                || ownerBox.raycast(shotFrom, shotFrom.add(landDir.multiply(dist + 5))).isPresent())
+        var landDir = target.getEyePosition().subtract(shotFrom).normalize();
+        if (ownerBox.clip(shotFrom, shotFrom.add(aimDir.scale(dist + 5))).isPresent()
+                || ownerBox.clip(shotFrom, shotFrom.add(landDir.scale(dist + 5))).isPresent())
             return false;
 
         // shoot arrow
         var stack = new ItemStack(Items.ARROW);
         var offset = targetPos.subtract(shotFrom);
-        var initialVelocity = offset.normalize().multiply(2);
+        var initialVelocity = offset.normalize().scale(2);
 
-        var arrowEntity = new ArrowEntity(world, shotFrom.x, shotFrom.y, shotFrom.z, stack, null);
+        var arrowEntity = new Arrow(world, shotFrom.x, shotFrom.y, shotFrom.z, stack, null);
         arrowEntity.setOwner(owner);
-        arrowEntity.setVelocity(initialVelocity);
-        world.spawnEntity(arrowEntity);
-        world.playSound(null, shotFrom.x, shotFrom.y, shotFrom.z, SoundEvents.BLOCK_DISPENSER_LAUNCH, SoundCategory.BLOCKS, 1.0f, 1.0f);
+        arrowEntity.setDeltaMovement(initialVelocity);
+        world.addFreshEntity(arrowEntity);
+        world.playSound(null, shotFrom.x, shotFrom.y, shotFrom.z, SoundEvents.DISPENSER_LAUNCH, SoundSource.BLOCKS, 1.0f, 1.0f);
 
         // recoil: kick the drone backward opposite to the shot direction
         var recoilDir = shotFrom.subtract(targetPos).normalize();
-        drone.recoilVelocity = drone.recoilVelocity.add(recoilDir.multiply(RECOIL_STRENGTH));
+        drone.recoilVelocity = drone.recoilVelocity.add(recoilDir.scale(RECOIL_STRENGTH));
 
         // particle
-        if (owner.getWorld() instanceof ServerWorld serverWorld) {
-            var forward = target.getEyePos().subtract(drone.currentPosition).normalize();
-            var particleStart = drone.currentPosition.add(forward.multiply(0.3f));
-            serverWorld.spawnParticles(ParticleTypes.SMALL_GUST, particleStart.x, particleStart.y, particleStart.z, 1, forward.x, forward.y, forward.z, 0.2f);
+        if (owner.level() instanceof ServerLevel serverWorld) {
+            var forward = target.getEyePosition().subtract(drone.currentPosition).normalize();
+            var particleStart = drone.currentPosition.add(forward.scale(0.3f));
+            serverWorld.sendParticles(ParticleTypes.SMALL_GUST, particleStart.x, particleStart.y, particleStart.z, 1, forward.x, forward.y, forward.z, 0.2f);
         }
 
         return true;
@@ -150,17 +150,17 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
     }
 
     @Override
-    public Vec3d getDesiredPosition() {
+    public Vec3 getDesiredPosition() {
         if (target == null || target.isRemoved() || !target.isAlive())
             return null;
-        var diff = target.getEyePos().subtract(owner.getEyePos());
-        var direction = new Vec3d(diff.x, 0, diff.z).normalize();
-        return owner.getEyePos().add(0, 1.0f, 0).add(direction.multiply(1.2f));
+        var diff = target.getEyePosition().subtract(owner.getEyePosition());
+        var direction = new Vec3(diff.x, 0, diff.z).normalize();
+        return owner.getEyePosition().add(0, 1.0f, 0).add(direction.scale(1.2f));
     }
 
     @Override
     public float getCurrentYaw() {
-        return Helpers.calculateYaw(drone.currentPosition, target.getEyePos());
+        return Helpers.calculateYaw(drone.currentPosition, target.getEyePosition());
     }
 
     @Override
@@ -176,25 +176,25 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
         }
 
         @Override
-        public boolean sense(DroneServerData drone, PlayerEntity player) {
+        public boolean sense(DroneServerData drone, Player player) {
 
-            var world = player.getWorld();
+            var world = player.level();
             var entityRange = getTargetingRange();
-            var playerHead = player.getEyePos();
+            var playerHead = player.getEyePosition();
 
-            var targets = world.getEntitiesByClass(LivingEntity.class, new Box(playerHead.x - entityRange, playerHead.y - entityRange, playerHead.z - entityRange, playerHead.x + entityRange, playerHead.y + entityRange, playerHead.z + entityRange), EntityPredicates.VALID_LIVING_ENTITY.and(EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR));
-            targets.sort(Comparator.comparingDouble((entity) -> entity.squaredDistanceTo(playerHead)));
+            var targets = world.getEntitiesOfClass(LivingEntity.class, new AABB(playerHead.x - entityRange, playerHead.y - entityRange, playerHead.z - entityRange, playerHead.x + entityRange, playerHead.y + entityRange, playerHead.z + entityRange), EntitySelector.LIVING_ENTITY_STILL_ALIVE.and(EntitySelector.NO_CREATIVE_OR_SPECTATOR));
+            targets.sort(Comparator.comparingDouble((entity) -> entity.distanceToSqr(playerHead)));
             targets = targets.stream()
-                    .filter(target -> target.isAlive() && !target.isRemoved() && target instanceof Monster)
-                    .filter(target -> !(target instanceof net.minecraft.entity.mob.EndermanEntity enderman)
-                            || (!shootsProjectile() && enderman.isAngry()))
+                    .filter(target -> target.isAlive() && !target.isRemoved() && target instanceof Enemy)
+                    .filter(target -> !(target instanceof net.minecraft.world.entity.monster.EnderMan enderman)
+                            || (!shootsProjectile() && enderman.isCreepy()))
                     .filter(target -> hasLos(world, drone.currentPosition, target))
                     .toList();
 
             if (targets.isEmpty()) return false;
 
             var bestTarget = targets.getFirst();
-            var dist = playerHead.distanceTo(bestTarget.getEyePos());
+            var dist = playerHead.distanceTo(bestTarget.getEyePosition());
             var t = Math.clamp(1.0 - dist / entityRange, 0.0, 1.0);
             var priority = (int) Math.round(ARROW_PRIORITY_MIN + t * (ARROW_PRIORITY_MAX - ARROW_PRIORITY_MIN));
             var currentPriority = drone.getCurrentTask() != null ? drone.getCurrentTask().getPriority() : 0;
@@ -212,7 +212,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
             return true;
         }
 
-        public void onTargetFound(DroneServerData drone, PlayerEntity player, LivingEntity target, int priority) {
+        public void onTargetFound(DroneServerData drone, Player player, LivingEntity target, int priority) {
             drone.setCurrentTask(new ArrowAttackBehaviour(target, player, drone, priority));
         }
     }
@@ -220,7 +220,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
     public static boolean isValid(RecordedBlock block, HashMap<Vec3i, BlockState> frame) {
         // is valid when facing forward (south?) and not blocked
 
-        var blockMatches = block.state().isIn(TagContent.ARROW_LAUNCHER);
+        var blockMatches = block.state().is(TagContent.ARROW_LAUNCHER);
         if (!blockMatches) return false;
 
         // ensure front is free

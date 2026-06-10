@@ -1,23 +1,10 @@
 package rearth.drone;
 
+import com.mojang.datafixers.util.Pair;
 import dev.architectury.event.EventResult;
 import dev.architectury.networking.NetworkManager;
 import dev.architectury.platform.Platform;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.noise.SimplexNoiseSampler;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
+import io.wispforest.accessories.api.AccessoriesContainer;
 import org.jetbrains.annotations.Nullable;
 import rearth.drone.behaviour.*;
 import rearth.init.CarriedItemComponent;
@@ -29,7 +16,24 @@ import rearth.util.Helpers;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.synth.SimplexNoise;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.Vec3;
 
 public class DroneController {
     
@@ -38,23 +42,23 @@ public class DroneController {
     
     private final static HashMap<Integer, DroneServerData> WORK_DATA = new HashMap<>();
     
-    public static final SimplexNoiseSampler SIMPLEX = new SimplexNoiseSampler(Random.create());
+    public static final SimplexNoise SIMPLEX = new SimplexNoise(RandomSource.create());
     
-    public static void tickPlayer(ServerPlayerEntity playerEntity) {
+    public static void tickPlayer(ServerPlayer playerEntity) {
         
         var droneCandidate = getPlayerServerData(playerEntity);
         droneCandidate.ifPresent(serverData -> updateDrone(playerEntity, serverData));
         
     }
     
-    public static void updateDrone(PlayerEntity player, DroneServerData serverData) {
+    public static void updateDrone(Player player, DroneServerData serverData) {
         
         if (serverData.getCurrentTask() == null) {
             serverData.setIdle(player, serverData);
         }
         
         if (serverData.droneData.isGlowing()) {
-            DroneLight.updateDroneLight(serverData, player.getWorld());
+            DroneLight.updateDroneLight(serverData, player.level());
         }
 
         if (serverData.actionCooldown > 0) {
@@ -77,8 +81,8 @@ public class DroneController {
         updateDroneMovement(player, serverData);
         
         // yes this gets players in 100 dist from all worlds, but I don't care
-        if (player.getWorld() instanceof ServerWorld serverWorld) {
-            var nearbyPlayers = serverWorld.getPlayers(candidate -> candidate.getPos().squaredDistanceTo(player.getPos()) < 10_000);
+        if (player.level() instanceof ServerLevel serverWorld) {
+            var nearbyPlayers = serverWorld.getPlayers(candidate -> candidate.position().distanceToSqr(player.position()) < 10_000);
             NetworkManager.sendToPlayers(nearbyPlayers, new NetworkContent.DroneMoveSyncPacket(serverData.currentPosition, serverData.currentRotation, serverData.droneData.getDroneId()));
             if (serverData.carriedItemDirty) {
                 NetworkManager.sendToPlayers(nearbyPlayers, new NetworkContent.DroneCarriedItemPacket(
@@ -95,8 +99,8 @@ public class DroneController {
      * smallest delta to the target (but > 0.5), checking axes in ascending delta
      * order.
      */
-    private static boolean tryAxisSlideMovement(World world, DroneServerData serverData, float powerMultiplier) {
-        record AxisMove(double absDelta, Vec3d candidatePos) {
+    private static boolean tryAxisSlideMovement(Level world, DroneServerData serverData, float powerMultiplier) {
+        record AxisMove(double absDelta, Vec3 candidatePos) {
         }
 
         var current = serverData.currentPosition;
@@ -130,7 +134,7 @@ public class DroneController {
         return false;
     }
 
-    private static void updateDroneSensors(PlayerEntity player, DroneServerData serverData) {
+    private static void updateDroneSensors(Player player, DroneServerData serverData) {
         if (serverData.taskCooldown > 0)
             return;
 
@@ -148,11 +152,11 @@ public class DroneController {
 
     }
     
-    private static void updateDroneMovement(PlayerEntity player, DroneServerData serverData) {
+    private static void updateDroneMovement(Player player, DroneServerData serverData) {
 
         // advance waypoint when the final target is now directly reachable
         if (serverData.nextTargetPosition != null) {
-            if (Helpers.isLineAvailable(player.getWorld(), serverData.currentPosition, serverData.nextTargetPosition)) {
+            if (Helpers.isLineAvailable(player.level(), serverData.currentPosition, serverData.nextTargetPosition)) {
                 serverData.currentTargetPosition = serverData.nextTargetPosition;
                 serverData.lastTargetPosition = serverData.nextTargetPosition;
                 serverData.nextTargetPosition = null;
@@ -168,7 +172,7 @@ public class DroneController {
         var targetOffset = serverData.currentTargetPosition.subtract(serverData.currentPosition);
         var maxOffset = powerMultiplier / 3.0;
         if (targetOffset.length() > maxOffset)
-            targetOffset = targetOffset.normalize().multiply(maxOffset);
+            targetOffset = targetOffset.normalize().scale(maxOffset);
         var velocityDelta = targetOffset.subtract(currentVelocity);
 
         // Reset ramp only when the target position changes significantly (new task/target),
@@ -189,7 +193,7 @@ public class DroneController {
         } else {
             effectiveRamp = serverData.accelerationRamp;
         }
-        var effectiveDelta = velocityDelta.multiply(effectiveRamp);
+        var effectiveDelta = velocityDelta.scale(effectiveRamp);
 
         // 2 movement modes:
         // horizontal thrusters only
@@ -206,8 +210,8 @@ public class DroneController {
         var acceleration = effectiveDelta.length();
         var spawnChance = acceleration - 0.5f;
 
-        if (player.getWorld().getRandom().nextFloat() < spawnChance && player.getWorld() instanceof ServerWorld serverWorld) {
-            serverWorld.spawnParticles(ParticleTypes.SMALL_GUST, serverData.currentPosition.x, serverData.currentPosition.y - 0.2f, serverData.currentPosition.z, 1,
+        if (player.level().getRandom().nextFloat() < spawnChance && player.level() instanceof ServerLevel serverWorld) {
+            serverWorld.sendParticles(ParticleTypes.SMALL_GUST, serverData.currentPosition.x, serverData.currentPosition.y - 0.2f, serverData.currentPosition.z, 1,
               0.1f, 0.1, 0.1,
               0.1f);
         }
@@ -217,13 +221,13 @@ public class DroneController {
             bankX += serverData.getCurrentTask().getExtraRoll();
         }
 
-        serverData.currentRotation = new Vec3d(bankX, rotationAngle, bankZ);
+        serverData.currentRotation = new Vec3(bankX, rotationAngle, bankZ);
 
-        serverData.currentVelocity = currentVelocity.add(effectiveDelta.multiply(accelerationPower));
+        serverData.currentVelocity = currentVelocity.add(effectiveDelta.scale(accelerationPower));
         
-        var nextPosition = serverData.currentPosition.add(serverData.currentVelocity.multiply(powerMultiplier / 20f));
+        var nextPosition = serverData.currentPosition.add(serverData.currentVelocity.scale(powerMultiplier / 20f));
         
-        var positionBlocked = !Helpers.isLineAvailable(player.getWorld(), serverData.currentPosition, nextPosition);
+        var positionBlocked = !Helpers.isLineAvailable(player.level(), serverData.currentPosition, nextPosition);
         
         //ghost through blocks
         if (serverData.ghostTicks > 0) {
@@ -235,13 +239,13 @@ public class DroneController {
                 serverData.ghostTicks = 20;
             }
             // while waiting, try to slide along the least-offset unobstructed axis
-            if (!tryAxisSlideMovement(player.getWorld(), serverData, powerMultiplier)) {
+            if (!tryAxisSlideMovement(player.level(), serverData, powerMultiplier)) {
                 // don't accumulate velocity, this avoids a sudden snap once ghosting kicks in
-                serverData.currentVelocity = Vec3d.ZERO;
+                serverData.currentVelocity = Vec3.ZERO;
                 serverData.accelerationRamp = DroneServerData.ACCELERATION_RAMP_STEP;
             }
         } else if (positionBlocked) {  // just hit an obstacle, start ghosting CD
-            serverData.currentVelocity = Vec3d.ZERO;
+            serverData.currentVelocity = Vec3.ZERO;
             serverData.accelerationRamp = DroneServerData.ACCELERATION_RAMP_STEP;
             serverData.ghostWaitTime = 40;
         } else {    // normal movement
@@ -252,25 +256,25 @@ public class DroneController {
         
         // apply recoil: a forced impulse set by attacks, decayed each tick, bypasses
         // banking
-        if (serverData.recoilVelocity.lengthSquared() > 0.0001) {
+        if (serverData.recoilVelocity.lengthSqr() > 0.0001) {
             serverData.currentPosition = serverData.currentPosition
-                    .add(serverData.recoilVelocity.multiply(powerMultiplier / 20.0));
-            serverData.recoilVelocity = serverData.recoilVelocity.multiply(0.75);
-            if (serverData.recoilVelocity.lengthSquared() < 0.0001)
-                serverData.recoilVelocity = Vec3d.ZERO;
+                    .add(serverData.recoilVelocity.scale(powerMultiplier / 20.0));
+            serverData.recoilVelocity = serverData.recoilVelocity.scale(0.75);
+            if (serverData.recoilVelocity.lengthSqr() < 0.0001)
+                serverData.recoilVelocity = Vec3.ZERO;
         }
 
         // tp to player if too far away
-        var playerDist = serverData.currentPosition.distanceTo(player.getEyePos());
+        var playerDist = serverData.currentPosition.distanceTo(player.getEyePosition());
         if (playerDist > SNAP_RANGE) {
-            serverData.currentPosition = player.getEyePos();
+            serverData.currentPosition = player.getEyePosition();
         }
         
     }
     
-    public static Optional<DroneServerData> getPlayerServerData(PlayerEntity playerEntity) {
+    public static Optional<DroneServerData> getPlayerServerData(Player playerEntity) {
         
-        if (!(playerEntity instanceof ServerPlayerEntity serverPlayer))
+        if (!(playerEntity instanceof ServerPlayer serverPlayer))
             return Optional.empty();
         var droneStack = findDroneItemStack(playerEntity);
         if (droneStack.isEmpty())
@@ -294,10 +298,10 @@ public class DroneController {
      * Finds the live ItemStack reference for the drone item worn by the given
      * player, checking HEAD slot, accessories:drone, and accessories:head cosmetic.
      */
-    public static Optional<ItemStack> findDroneItemStack(PlayerEntity playerEntity) {
-        var headStack = playerEntity.getEquippedStack(EquipmentSlot.HEAD);
-        if (headStack.isOf(ItemContent.POCKET_DRONE.get())
-                && headStack.contains(ComponentContent.DRONE_DATA_TYPE.get())) {
+    public static Optional<ItemStack> findDroneItemStack(Player playerEntity) {
+        var headStack = playerEntity.getItemBySlot(EquipmentSlot.HEAD);
+        if (headStack.is(ItemContent.POCKET_DRONE.get())
+                && headStack.has(ComponentContent.DRONE_DATA_TYPE.get())) {
             return Optional.of(headStack);
         }
 
@@ -309,8 +313,8 @@ public class DroneController {
             if (droneSlot != null) {
                 for (var pair : droneSlot.getAccessories()) {
                     var candidate = pair.getSecond();
-                    if (candidate.isOf(ItemContent.POCKET_DRONE.get())
-                            && candidate.contains(ComponentContent.DRONE_DATA_TYPE.get())) {
+                    if (candidate.is(ItemContent.POCKET_DRONE.get())
+                            && candidate.has(ComponentContent.DRONE_DATA_TYPE.get())) {
                         return Optional.of(candidate);
                     }
                 }
@@ -320,8 +324,8 @@ public class DroneController {
             if (headCosmetic != null) {
                 for (var pair : headCosmetic.getCosmeticAccessories()) {
                     var candidate = pair.getSecond();
-                    if (candidate.isOf(ItemContent.POCKET_DRONE.get())
-                            && candidate.contains(ComponentContent.DRONE_DATA_TYPE.get())) {
+                    if (candidate.is(ItemContent.POCKET_DRONE.get())
+                            && candidate.has(ComponentContent.DRONE_DATA_TYPE.get())) {
                         return Optional.of(candidate);
                     }
                 }
@@ -335,7 +339,7 @@ public class DroneController {
      * Persists the drone's carried item into the PocketDrone ItemStack's component
      * data, so it survives server restarts. Covers HEAD slot and Accessories slots.
      */
-    public static void saveCarriedItemToStack(PlayerEntity owner, ItemStack carriedItem) {
+    public static void saveCarriedItemToStack(Player owner, ItemStack carriedItem) {
         var droneStack = findDroneItemStack(owner);
         droneStack.ifPresent(stack -> {
             if (carriedItem.isEmpty()) {
@@ -346,12 +350,12 @@ public class DroneController {
         });
     }
 
-    public static Optional<DroneData> getDroneOfPlayer(PlayerEntity playerEntity) {
+    public static Optional<DroneData> getDroneOfPlayer(Player playerEntity) {
         return findDroneItemStack(playerEntity)
                 .map(stack -> stack.get(ComponentContent.DRONE_DATA_TYPE.get()));
     }
     
-    private static void issueAttackCommend(PlayerEntity player, DroneServerData serverData, LivingEntity livingEntity) {
+    private static void issueAttackCommend(Player player, DroneServerData serverData, LivingEntity livingEntity) {
         var currentTask = serverData.getCurrentTask();
 
         if (serverData.droneData.installed.contains(DroneBehaviour.BlockFunctions.BEAM)) {
@@ -366,7 +370,7 @@ public class DroneController {
         }
     }
     
-    public static EventResult onPlayerAttackEntityEvent(PlayerEntity player, World world, Entity entity, Hand hand, @Nullable EntityHitResult entityHitResult) {
+    public static EventResult onPlayerAttackEntityEvent(Player player, Level world, Entity entity, InteractionHand hand, @Nullable EntityHitResult entityHitResult) {
         
         var droneCandidate = getPlayerServerData(player);
         if (droneCandidate.isPresent() && entity instanceof LivingEntity livingEntity)
@@ -376,10 +380,10 @@ public class DroneController {
         return EventResult.pass();
     }
     
-    public static void onPlayerBlockBreakStart(PlayerEntity player, BlockPos blockPos) {
+    public static void onPlayerBlockBreakStart(Player player, BlockPos blockPos) {
         
         var droneCandidate = getPlayerServerData(player);
-        if (droneCandidate.isPresent() && MiningSupportBehaviour.isValidMiningTarget(player.getWorld(), blockPos)) {
+        if (droneCandidate.isPresent() && MiningSupportBehaviour.isValidMiningTarget(player.level(), blockPos)) {
             if (droneCandidate.get().droneData.installed.contains(DroneBehaviour.BlockFunctions.MINING_SUPPORT))
                 droneCandidate.get().setCurrentTask(new MiningSupportBehaviour(blockPos, player, droneCandidate.get()));
         }
@@ -390,7 +394,7 @@ public class DroneController {
     // data (carried item) is already saved to the item stack component, so it
     // is safe to drop the in-memory entry here. On the next login a fresh
     // DroneServerData will be reconstructed from the saved component.
-    public static void clearPlayerData(ServerPlayerEntity player) {
+    public static void clearPlayerData(ServerPlayer player) {
         getDroneOfPlayer(player).ifPresent(droneData -> WORK_DATA.remove(droneData.getDroneId()));
     }
 }

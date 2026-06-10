@@ -1,54 +1,60 @@
 package rearth.client.ui;
 
+import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import dev.architectury.networking.NetworkManager;
-import net.minecraft.block.BlockEntityProvider;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.render.DiffuseLighting;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
-import net.minecraft.client.resource.language.I18n;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.client.sound.SoundManager;
-import net.minecraft.client.toast.SystemToast;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.RotationAxis;
-import net.minecraft.util.math.Vec3i;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import rearth.Drones;
 import rearth.blocks.controller.ControllerBlockEntity;
 import rearth.drone.DroneData;
+import rearth.drone.RecordedBlock;
 import rearth.drone.behaviour.DroneBehaviour;
-
+import rearth.drone.behaviour.DroneBehaviour.BlockFunctions;
 import java.util.HashMap;
 import java.util.List;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Renderable;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.toasts.SystemToast;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.sounds.SoundManager;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class DroneCreatorScreen extends Screen {
     
-    private static final Identifier BACKGROUND_TEXTURE = Drones.id("textures/gui/assembler.png");
+    private static final ResourceLocation BACKGROUND_TEXTURE = Drones.id("textures/gui/assembler.png");
     
-    private static final Identifier BIG_BUTTON_TEXTURE = Drones.id("textures/gui/big_button.png");
-    private static final Identifier BIG_BUTTON_HOVER_TEXTURE = Drones.id("textures/gui/big_button_hover.png");
-    private static final Identifier BIG_BUTTON_PRESSED_TEXTURE = Drones.id("textures/gui/big_button_pressed.png");
+    private static final ResourceLocation BIG_BUTTON_TEXTURE = Drones.id("textures/gui/big_button.png");
+    private static final ResourceLocation BIG_BUTTON_HOVER_TEXTURE = Drones.id("textures/gui/big_button_hover.png");
+    private static final ResourceLocation BIG_BUTTON_PRESSED_TEXTURE = Drones.id("textures/gui/big_button_pressed.png");
     
-    private static final Identifier SLOT_PANEL_TEXTURE = Drones.id("textures/gui/slot_panel.png");
+    private static final ResourceLocation SLOT_PANEL_TEXTURE = Drones.id("textures/gui/slot_panel.png");
     
     private final DroneData droneData;
     private final HashMap<Vec3i, BlockEntity> renderedEntities = new HashMap<>();
@@ -56,10 +62,10 @@ public class DroneCreatorScreen extends Screen {
     private final BlockPos machinePos;
     
     private float previewAngle = 0;
-    private TextFieldWidget nameField;
+    private EditBox nameField;
     
     public DroneCreatorScreen(DroneData data, BlockPos machinePos) {
-        super(Text.empty());
+        super(Component.empty());
         this.machinePos = machinePos;
         
         if (data == null)
@@ -70,11 +76,11 @@ public class DroneCreatorScreen extends Screen {
         
         for (var pair : droneData.getBlocks()) {
             var state = pair.state();
-            if (state.getBlock() instanceof BlockEntityProvider blockEntityProvider) {
-                var blockEntity = blockEntityProvider.createBlockEntity(new BlockPos(pair.localPos()), state);
-                if (blockEntity != null && this.client != null) {
-                    blockEntity.setWorld(this.client.world);
-                    var renderer = MinecraftClient.getInstance().getBlockEntityRenderDispatcher().get(blockEntity);
+            if (state.getBlock() instanceof EntityBlock blockEntityProvider) {
+                var blockEntity = blockEntityProvider.newBlockEntity(new BlockPos(pair.localPos()), state);
+                if (blockEntity != null && this.minecraft != null) {
+                    blockEntity.setLevel(this.minecraft.level);
+                    var renderer = Minecraft.getInstance().getBlockEntityRenderDispatcher().getRenderer(blockEntity);
                     if (renderer != null) {
                         renderedEntities.put(pair.localPos(), blockEntity);
                     }
@@ -96,21 +102,21 @@ public class DroneCreatorScreen extends Screen {
         var nameX = backgroundStartX + 7;
         var nameY = backgroundStartY + 140;
         
-        var buttonWidget = new BigDroneButton(buttonX, buttonY, 138, 59, Text.literal("BUILD!").formatted(Formatting.BOLD), button -> {
+        var buttonWidget = new BigDroneButton(buttonX, buttonY, 138, 59, Component.literal("BUILD!").withStyle(ChatFormatting.BOLD), button -> {
         }, this);
         
-        this.addDrawableChild(buttonWidget);
+        this.addRenderableWidget(buttonWidget);
         
-        nameField = new TextFieldWidget(this.textRenderer, nameX, nameY, 138, 32, Text.literal("Input"));
+        nameField = new EditBox(this.font, nameX, nameY, 138, 32, Component.literal("Input"));
         nameField.setMaxLength(32);
-        nameField.setTooltip(Tooltip.of(Text.translatable("tooltip.drones.name_field")));
-        nameField.setText("Dronie");
-        this.addDrawableChild(nameField);
+        nameField.setTooltip(Tooltip.create(Component.translatable("tooltip.drones.name_field")));
+        nameField.setValue("Dronie");
+        this.addRenderableWidget(nameField);
         
     }
     
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         this.renderBackground(context, mouseX, mouseY, delta);
         
         var textColor = 13685204;
@@ -120,19 +126,19 @@ public class DroneCreatorScreen extends Screen {
         var backgroundStartX = centerX - (300 / 2);
         var backgroundStartY = centerY - (183 / 2);
         
-        context.drawTexture(BACKGROUND_TEXTURE, backgroundStartX, backgroundStartY, 0, 0, 0, 300, 183, 300, 183);
+        context.blit(BACKGROUND_TEXTURE, backgroundStartX, backgroundStartY, 0, 0, 0, 300, 183, 300, 183);
         
         for (var pair : droneData.getBlocks()) {
             var entity = renderedEntities.get(pair.localPos());
             renderBlock(context, pair.localPos(), pair.state(), entity, delta);
         }
         
-        for (var drawable : this.drawables) {
+        for (var drawable : this.renderables) {
             drawable.render(context, mouseX, mouseY, delta);
         }
         
-        context.drawText(this.textRenderer, Text.literal("Speed:"), backgroundStartX + 161, backgroundStartY + 13, textColor, false);
-        context.drawText(this.textRenderer, Text.literal("Size:"), backgroundStartX + 161, backgroundStartY + 44, textColor, false);
+        context.drawString(this.font, Component.literal("Speed:"), backgroundStartX + 161, backgroundStartY + 13, textColor, false);
+        context.drawString(this.font, Component.literal("Size:"), backgroundStartX + 161, backgroundStartY + 44, textColor, false);
         
         // render bars
         var greenColor = -12810969;
@@ -169,17 +175,17 @@ public class DroneCreatorScreen extends Screen {
             
             var startAtX = abilitiesStartX + index * (20 + 3);
             
-            context.drawTexture(SLOT_PANEL_TEXTURE, startAtX, abilitiesStartY, 0, 0, 0, 20, 20, 20, 20);
+            context.blit(SLOT_PANEL_TEXTURE, startAtX, abilitiesStartY, 0, 0, 0, 20, 20, 20, 20);
             
             var isHovered = mouseX > startAtX && mouseX < startAtX + 20 && mouseY > abilitiesStartY && mouseY < abilitiesStartY + 20;
             if (isHovered) {
                 
-                context.drawTooltip(this.textRenderer, Text.translatable("drones.ability." + ability.name().toLowerCase()), startAtX, abilitiesStartY + 40);
+                context.renderTooltip(this.font, Component.translatable("drones.ability." + ability.name().toLowerCase()), startAtX, abilitiesStartY + 40);
                 
                 for (int i = 0; i < 5; i++) {
                     var tooltipKey = "drones.ability." + ability.name().toLowerCase() + "." + i;
-                    if (I18n.hasTranslation(tooltipKey)) {
-                        context.drawTooltip(this.textRenderer, Text.translatable(tooltipKey), startAtX, abilitiesStartY + 40 + 11 + i * 10);
+                    if (I18n.exists(tooltipKey)) {
+                        context.renderTooltip(this.font, Component.translatable(tooltipKey), startAtX, abilitiesStartY + 40 + 11 + i * 10);
                     }
                 }
                 
@@ -192,7 +198,7 @@ public class DroneCreatorScreen extends Screen {
         }
         
         if (index == 0) {
-            context.drawText(this.textRenderer, Text.literal("No Abilities"), abilitiesStartX + 5, abilitiesStartY + 7, textColor, false);
+            context.drawString(this.font, Component.literal("No Abilities"), abilitiesStartX + 5, abilitiesStartY + 7, textColor, false);
         }
         
         this.openTime += delta;
@@ -200,7 +206,7 @@ public class DroneCreatorScreen extends Screen {
         
     }
     
-    private void drawBarPart(DrawContext context, int backgroundStartX, int backgroundStartY, float fillStart, float fillEnd, int color, int height, int yOffset) {
+    private void drawBarPart(GuiGraphics context, int backgroundStartX, int backgroundStartY, float fillStart, float fillEnd, int color, int height, int yOffset) {
         var speedFromX = backgroundStartX + 161 + (int) (124 * fillStart);
         var speedFromY = backgroundStartY + 26 + yOffset;
         var speedToX = backgroundStartX + 161 + (int) (124 * fillEnd);
@@ -208,7 +214,7 @@ public class DroneCreatorScreen extends Screen {
         context.fill(speedFromX, speedFromY, speedToX, speedToY, 10, color);
     }
     
-    private void renderBlock(DrawContext context, Vec3i offset, BlockState state, @Nullable BlockEntity entity, float partialTicks) {
+    private void renderBlock(GuiGraphics context, Vec3i offset, BlockState state, @Nullable BlockEntity entity, float partialTicks) {
         
         var x = this.width / 2 - (300 / 2) + 70;
         var y = this.height / 2 - 30;
@@ -218,38 +224,38 @@ public class DroneCreatorScreen extends Screen {
         
         var scale = droneData.getRenderScale();
         
-        context.getMatrices().push();
+        context.pose().pushPose();
         
-        context.getMatrices().translate(x + size / 2f, y + size / 2f, 400);
-        context.getMatrices().scale(40 * size / 64f, -40 * size / 64f, 40);
-        context.getMatrices().scale(scale, scale, scale);
+        context.pose().translate(x + size / 2f, y + size / 2f, 400);
+        context.pose().scale(40 * size / 64f, -40 * size / 64f, 40);
+        context.pose().scale(scale, scale, scale);
         
-        context.getMatrices().multiply(RotationAxis.POSITIVE_X.rotationDegrees(30 + previewAngle));
-        context.getMatrices().multiply(RotationAxis.POSITIVE_Y.rotationDegrees(45 + 180 + rotation));
+        context.pose().mulPose(Axis.XP.rotationDegrees(30 + previewAngle));
+        context.pose().mulPose(Axis.YP.rotationDegrees(45 + 180 + rotation));
         
-        context.getMatrices().translate(-.5 + offset.getX(), -.5 + offset.getY(), -.5 + offset.getZ());
+        context.pose().translate(-.5 + offset.getX(), -.5 + offset.getY(), -.5 + offset.getZ());
         
         RenderSystem.runAsFancy(() -> {
-            final var vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
-            if (state.getRenderType() != BlockRenderType.ENTITYBLOCK_ANIMATED) {
-                this.client.getBlockRenderManager().renderBlockAsEntity(
-                  state, context.getMatrices(), vertexConsumers, LightmapTextureManager.MAX_LIGHT_COORDINATE, OverlayTexture.DEFAULT_UV
+            final var vertexConsumers = minecraft.renderBuffers().bufferSource();
+            if (state.getRenderShape() != RenderShape.ENTITYBLOCK_ANIMATED) {
+                this.minecraft.getBlockRenderer().renderSingleBlock(
+                  state, context.pose(), vertexConsumers, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY
                 );
             }
             
             if (entity != null) {
-                var entityRenderer = this.client.getBlockEntityRenderDispatcher().get(entity);
+                var entityRenderer = this.minecraft.getBlockEntityRenderDispatcher().getRenderer(entity);
                 if (entityRenderer != null) {
-                    entityRenderer.render(entity, partialTicks, context.getMatrices(), vertexConsumers, LightmapTextureManager.MAX_LIGHT_COORDINATE, OverlayTexture.DEFAULT_UV);
+                    entityRenderer.render(entity, partialTicks, context.pose(), vertexConsumers, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
                 }
             }
             
             RenderSystem.setShaderLights(new Vector3f(-1.5f, -.5f, 0), new Vector3f(0, -1, 0));
-            vertexConsumers.draw();
-            DiffuseLighting.enableGuiDepthLighting();
+            vertexConsumers.endBatch();
+            Lighting.setupFor3DItems();
         });
         
-        context.getMatrices().pop();
+        context.pose().popPose();
     }
     
     @Override
@@ -283,18 +289,18 @@ public class DroneCreatorScreen extends Screen {
         return Math.clamp(droneData.getSize() / 10f, 0.1f, 1);
     }
     
-    private static void drawItem(DrawContext context, Item item, int x, int y, int size) {
-        var itemRenderer = MinecraftClient.getInstance().getItemRenderer();
-        var entityBuffers = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
+    private static void drawItem(GuiGraphics context, Item item, int x, int y, int size) {
+        var itemRenderer = Minecraft.getInstance().getItemRenderer();
+        var entityBuffers = Minecraft.getInstance().renderBuffers().bufferSource();
         var stack = new ItemStack(item);
         
-        final boolean notSideLit = !itemRenderer.getModel(stack, null, null, 0).isSideLit();
+        final boolean notSideLit = !itemRenderer.getModel(stack, null, null, 0).usesBlockLight();
         if (notSideLit) {
-            DiffuseLighting.disableGuiDepthLighting();
+            Lighting.setupForFlatItems();
         }
         
-        var matrices = context.getMatrices();
-        matrices.push();
+        var matrices = context.pose();
+        matrices.pushPose();
         
         // Translate to the root of the component
         matrices.translate(x, y, 100);
@@ -307,55 +313,55 @@ public class DroneCreatorScreen extends Screen {
         if (notSideLit) {
             matrices.scale(16, -16, 16);
         } else {
-            matrices.multiplyPositionMatrix(new Matrix4f().scaling(16, -16, 16));
+            matrices.mulPose(new Matrix4f().scaling(16, -16, 16));
         }
         
-        var client = MinecraftClient.getInstance();
+        var client = Minecraft.getInstance();
         
-        itemRenderer.renderItem(
+        itemRenderer.renderStatic(
           stack,
-          ModelTransformationMode.GUI,
-          LightmapTextureManager.MAX_LIGHT_COORDINATE,
-          OverlayTexture.DEFAULT_UV,
+          ItemDisplayContext.GUI,
+          LightTexture.FULL_BRIGHT,
+          OverlayTexture.NO_OVERLAY,
           matrices, entityBuffers,
-          client.world,
+          client.level,
           0);
-        entityBuffers.draw();
+        entityBuffers.endBatch();
         
         // Clean up
-        matrices.pop();
+        matrices.popPose();
         
         if (notSideLit) {
-            DiffuseLighting.enableGuiDepthLighting();
+            Lighting.setupFor3DItems();
         }
     }
     
     public void assembleDrone() {
         
         if (!this.droneData.isValid()) {
-            this.client.getToastManager().add(  // says "assembled, drone has been added to inv"
-              SystemToast.create(this.client, SystemToast.Type.NARRATOR_TOGGLE, Text.translatable("drone.message.invalid_drone"), Text.translatable("drone.message.invalid_drone_desc"))
+            this.minecraft.getToasts().addToast(  // says "assembled, drone has been added to inv"
+              SystemToast.multiline(this.minecraft, SystemToast.SystemToastId.NARRATOR_TOGGLE, Component.translatable("drone.message.invalid_drone"), Component.translatable("drone.message.invalid_drone_desc"))
             );
             
             return;
         }
         
-        this.client.getToastManager().add(  // says "assembled, drone has been added to inv"
-          SystemToast.create(this.client, SystemToast.Type.NARRATOR_TOGGLE, Text.translatable("drone.message.assembled"), Text.translatable("drone.message.assembled_desc"))
+        this.minecraft.getToasts().addToast(  // says "assembled, drone has been added to inv"
+          SystemToast.multiline(this.minecraft, SystemToast.SystemToastId.NARRATOR_TOGGLE, Component.translatable("drone.message.assembled"), Component.translatable("drone.message.assembled_desc"))
         );
         
-        NetworkManager.sendToServer(new ControllerBlockEntity.AssembleDronePacket(nameField.getText(), machinePos));
+        NetworkManager.sendToServer(new ControllerBlockEntity.AssembleDronePacket(nameField.getValue(), machinePos));
         
-        this.close();
+        this.onClose();
     }
     
-    private static class BigDroneButton extends ButtonWidget {
+    private static class BigDroneButton extends Button {
         
         private boolean isPressed = false;
         private final DroneCreatorScreen parent;
         
-        protected BigDroneButton(int x, int y, int width, int height, Text message, PressAction onPress, DroneCreatorScreen parent) {
-            super(x, y, width, height, message, onPress, ButtonWidget.DEFAULT_NARRATION_SUPPLIER);
+        protected BigDroneButton(int x, int y, int width, int height, Component message, OnPress onPress, DroneCreatorScreen parent) {
+            super(x, y, width, height, message, onPress, Button.DEFAULT_NARRATION);
             this.parent = parent;
         }
         
@@ -372,7 +378,7 @@ public class DroneCreatorScreen extends Screen {
             if (valid && isPressed) {
                 isPressed = false;
                 this.parent.assembleDrone();
-                playUpSound(MinecraftClient.getInstance().getSoundManager());
+                playUpSound(Minecraft.getInstance().getSoundManager());
             }
             
             return valid;
@@ -380,16 +386,16 @@ public class DroneCreatorScreen extends Screen {
         
         @Override
         public void playDownSound(SoundManager soundManager) {
-            soundManager.play(PositionedSoundInstance.master(SoundEvents.BLOCK_NETHER_WOOD_PRESSURE_PLATE_CLICK_ON, 0.7F));
+            soundManager.play(SimpleSoundInstance.forUI(SoundEvents.NETHER_WOOD_PRESSURE_PLATE_CLICK_ON, 0.7F));
         }
         
         public void playUpSound(SoundManager soundManager) {
-            soundManager.play(PositionedSoundInstance.master(SoundEvents.BLOCK_BEACON_DEACTIVATE, 0.7F));
+            soundManager.play(SimpleSoundInstance.forUI(SoundEvents.BEACON_DEACTIVATE, 0.7F));
         }
         
         @SuppressWarnings("lossy-conversions")
         @Override
-        protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+        protected void renderWidget(GuiGraphics context, int mouseX, int mouseY, float delta) {
             
             var usedTexture = BIG_BUTTON_TEXTURE;
             
@@ -400,7 +406,7 @@ public class DroneCreatorScreen extends Screen {
                 usedTexture = BIG_BUTTON_PRESSED_TEXTURE;
             
             
-            context.drawTexture(usedTexture, this.getX(), this.getY(), 0, 0, 0, this.getWidth(), this.getHeight(), this.getWidth(), this.getHeight());
+            context.blit(usedTexture, this.getX(), this.getY(), 0, 0, 0, this.getWidth(), this.getHeight(), this.getWidth(), this.getHeight());
             
             var scale = 3.4f;
             
@@ -416,15 +422,15 @@ public class DroneCreatorScreen extends Screen {
                 textY += 6;
             
             
-            context.getMatrices().push();
-            context.getMatrices().scale(scale, scale, scale);
+            context.pose().pushPose();
+            context.pose().scale(scale, scale, scale);
             
             textX /= scale;
             textY /= scale;
             
-            context.drawText(MinecraftClient.getInstance().textRenderer, this.getMessage(), textX, textY, textColor, false);
+            context.drawString(Minecraft.getInstance().font, this.getMessage(), textX, textY, textColor, false);
             
-            context.getMatrices().pop();
+            context.pose().popPose();
         }
     }
 }

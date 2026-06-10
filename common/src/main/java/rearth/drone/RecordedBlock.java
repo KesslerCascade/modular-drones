@@ -3,11 +3,11 @@ package rearth.drone;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.util.math.Vec3i;
+import net.minecraft.core.Vec3i;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import rearth.util.Helpers;
 
 public record RecordedBlock(BlockState state, Vec3i localPos) {
@@ -17,8 +17,8 @@ public record RecordedBlock(BlockState state, Vec3i localPos) {
       Vec3i.CODEC.fieldOf("p").forGetter(RecordedBlock::localPos)
     ).apply(instance, RecordedBlock::new));
     
-    public static final PacketCodec<ByteBuf, RecordedBlock> PACKET_CODEC = PacketCodec.tuple(
-      PacketCodecs.entryOf(Block.STATE_IDS),
+    public static final StreamCodec<ByteBuf, RecordedBlock> PACKET_CODEC = StreamCodec.composite(
+      ByteBufCodecs.idMapper(Block.BLOCK_STATE_REGISTRY),
       RecordedBlock::state,
       Helpers.VEC3I_PACKET_CODEC,
       RecordedBlock::localPos,
