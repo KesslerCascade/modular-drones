@@ -4,7 +4,7 @@ icon: drones:pocket_drone
 related_items: [drones:pocket_drone, drones:controller, drones:frame]
 ---
 
-Buddy Drones allows you to create custom personal drones or quadcopters. They are based on your design, and when active,
+Modular Drones allows you to create custom personal drones or quadcopters. They are based on your design, and when active,
 hover behind the player. Based on the blocks the drone is built with, it'll have different properties, such as different
 speeds, abilities, etc.
 
@@ -14,7 +14,7 @@ For more information on what the drone can do, check out the [abilities](./abili
     Drones do not require any fuel/upkeep, and are always active when equipped.
 </Callout>
 
-New rotor blocks have been added that allow the drone to actually fly. There's a basic wooden rotor, an iron rotor, and a strong ion thruster.
+Rotor blocks have been added that allow the drone to actually fly. There's a basic wooden rotor, an iron rotor, and a strong ion thruster.
 
 ## Assembly
 
@@ -30,10 +30,12 @@ The assembly controller UI can show you the properties of your drone while build
 the world to a pocket drone item, which you can then pick up.
 
 <Callout variant="info">
-    Harder and heavier blocks will make the drone heavier. Add more thrusters to compensate for this. Better thrusters provide more power.
+    Bigger drones with more blocks will make the drone heavier and slower. Add more rotors or thrusters to compensate for this. Better thrusters provide more power.
 </Callout>
 
 To edit a drone or convert it back into real blocks in the world, simply use the pocket drone item, and use it on a drone assembly controller (with a frame attached to it).
+Note that the position of the controller **must** be the same relative to the frame blocks as it was when the drone was originally constructed. The assembly frames face
+a specific direction, indicated by the arrow, so if you move your drone assembly platform make sure to take note of which side/position the controller was on.
 
 
 ## Usage
@@ -41,4 +43,5 @@ To edit a drone or convert it back into real blocks in the world, simply use the
 Once assembled, the pocket drone item can be equipped to activate the drone. When worn in the head slot or the 'drone' accessories slot, the drone will be active.
 It does not consume any fuel, and the abilities of the drone are always active. To cancel an action of a drone, simply move away and it'll go back to following you around.
 
-If the **accessories** mod is installed, the drone can also be put in the cosmetic accessories head slot and still work.
+If the **Curios** (NeoForge), **Trinkets** (Fabric), or **Accessories** mod is installed, a dedicated slot to place the drone into is available. For backwards compatibility,
+the cosmetic head slot can also be used, but only with the Accessories mod.
