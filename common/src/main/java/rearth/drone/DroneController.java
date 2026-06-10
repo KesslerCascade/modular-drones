@@ -332,6 +332,10 @@ public class DroneController {
             }
         }
 
+        var accessorySlotItem = AccessorySlots.findDroneSlotItem(playerEntity);
+        if (accessorySlotItem.isPresent())
+            return accessorySlotItem;
+
         return Optional.empty();
     }
 

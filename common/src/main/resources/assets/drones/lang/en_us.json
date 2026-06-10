@@ -34,5 +34,7 @@
   "block.drones.ion_thruster": "Ion Thruster",
   "block.drones.drill": "Drill",
   "tooltip.drones.builder": "Used to create a modular drone buddy. Place this next to an assembly frame, and then build a drone on that frame.",
-  "accessories.slot.drone": "Drone"
+  "accessories.slot.drone": "Drone",
+  "trinkets.slot.drone.drone": "Drone",
+  "curios.identifier.drone": "Drone"
 }

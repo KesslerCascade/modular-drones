@@ -1,0 +1,7 @@
+{
+  "size": 1,
+  "operation": "SET",
+  "order": 100,
+  "icon": "drones:slot/drone",
+  "validators": ["curios:tag"]
+}

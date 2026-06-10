@@ -26,6 +26,17 @@ loom {
     }
 }
 
+repositories {
+    maven {
+        name = 'TerraformersMC'
+        url = 'https://maven.terraformersmc.com/releases/'
+    }
+    maven {
+        name = 'Ladysnake Libs'
+        url = 'https://maven.ladysnake.org/releases'
+    }
+}
+
 configurations {
     common {
         canBeResolved = true
@@ -56,6 +67,8 @@ dependencies {
     shadowBundle project(path: ':common', configuration: 'transformProductionFabric')
 
     modImplementation("io.wispforest:accessories-fabric:${project.accessories_version}")
+
+    modImplementation("dev.emi:trinkets:${rootProject.trinkets_version}")
 
 }
 

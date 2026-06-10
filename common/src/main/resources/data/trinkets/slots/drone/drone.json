@@ -1,0 +1,6 @@
+{
+  "icon": "drones:gui/slot/drone",
+  "amount": 1,
+  "order": 0,
+  "validator_predicates": ["trinkets:tag"]
+}
