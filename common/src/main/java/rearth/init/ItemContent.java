@@ -1,5 +1,6 @@
 package rearth.init;
 
+import dev.architectury.platform.Platform;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
 import net.minecraft.core.component.DataComponents;
@@ -15,12 +16,22 @@ public class ItemContent {
 
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(Drones.MOD_ID, Registries.ITEM);
 
-    public static final RegistrySupplier<Item> POCKET_DRONE = ITEMS.register("pocket_drone", () ->
-                                                                                               new PocketDrone(new Item.Properties()
-                                                                                                                 .setId(ResourceKey.create(Registries.ITEM, Drones.id("pocket_drone")))
-                                                                                                                 .stacksTo(1)
-                                                                                                                 .component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.HEAD).build())
-                                                                                               ));
+    /**
+     * If Curios/Trinkets is installed, the drone has a dedicated accessory slot,
+     * so it shouldn't also be wearable in the vanilla head slot.
+     */
+    public static final boolean HAS_ACCESSORY_SLOT = Platform.isModLoaded("curios") || Platform.isModLoaded("trinkets");
+
+    public static final RegistrySupplier<Item> POCKET_DRONE = ITEMS.register("pocket_drone", () -> {
+        var properties = new Item.Properties()
+                            .setId(ResourceKey.create(Registries.ITEM, Drones.id("pocket_drone")))
+                            .stacksTo(1);
+
+        if (!HAS_ACCESSORY_SLOT)
+            properties.component(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.HEAD).build());
+
+        return new PocketDrone(properties);
+    });
 
     public static Item.Properties properties(String name) {
         return new Item.Properties().setId(ResourceKey.create(Registries.ITEM, Drones.id(name)));

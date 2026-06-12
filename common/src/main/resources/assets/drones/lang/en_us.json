@@ -4,6 +4,7 @@
   "tooltip.drones.data_size": "Size: %s",
   "tooltip.drones.abilities_heading": "Abilities:",
   "tooltip.drones.equip_hint": "Equip in Head Slot to use.",
+  "tooltip.drones.equip_hint_accessory": "Equip in an accessory slot to use.",
   "tooltip.drones.name_field": "Name of the Drone.",
   "drones.ability.arrow_launcher": "Arrow Launcher",
   "drones.ability.arrow_launcher.0": "Automatically shoots arrows as nearby enemies.",

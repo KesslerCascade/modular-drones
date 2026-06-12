@@ -3,6 +3,7 @@ package rearth.items;
 import rearth.drone.DroneData;
 import rearth.drone.behaviour.DroneBehaviour.BlockFunctions;
 import rearth.init.ComponentContent;
+import rearth.init.ItemContent;
 import java.util.EnumSet;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
@@ -43,7 +44,8 @@ public class PocketDrone extends Item {
         }
 
         tooltip.accept(Component.literal(""));
-        tooltip.accept(Component.translatable("tooltip.drones.equip_hint").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY));
+        var equipHintKey = ItemContent.HAS_ACCESSORY_SLOT ? "tooltip.drones.equip_hint_accessory" : "tooltip.drones.equip_hint";
+        tooltip.accept(Component.translatable(equipHintKey).withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY));
 
 
         super.appendHoverText(stack, context, tooltipDisplay, tooltip, type);
