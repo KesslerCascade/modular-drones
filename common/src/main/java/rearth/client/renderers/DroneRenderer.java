@@ -10,6 +10,7 @@ import rearth.util.Helpers;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -24,24 +25,27 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
+import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.MovingBlockRenderState;
-import net.minecraft.client.renderer.block.ModelBlockRenderer;
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.RandomSource;
+import com.mojang.blaze3d.vertex.QuadInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -144,12 +148,7 @@ public class DroneRenderer {
                 var light = getMaxLight(BlockPos.containing(movementData.position()), world);
                 
                 // render baked / animated block
-                Minecraft.getInstance().getBlockRenderer().renderSingleBlock(
-                  state,
-                  matrices,
-                  vertexConsumers,
-                  light, OverlayTexture.NO_OVERLAY
-                );
+                renderSingleBlock(state, matrices, collector, world, BlockPos.containing(movementData.position()), light, OverlayTexture.NO_OVERLAY);
                 
                 // render optional custom entity renderer
                 if (state.getBlock() instanceof EntityBlock blockEntityProvider) {
@@ -157,7 +156,7 @@ public class DroneRenderer {
                     if (blockEntity != null) {
                         blockEntity.setLevel(world);
                         var dispatcher = Minecraft.getInstance().getBlockEntityRenderDispatcher();
-                        dispatcher.prepare(camera);
+                        dispatcher.prepare(camera.position());
                         var renderState = dispatcher.tryExtractRenderState(blockEntity, 0, null);
                         if (renderState != null) {
                             dispatcher.submit(renderState, matrices, collector, cameraRenderState);
@@ -244,23 +243,55 @@ public class DroneRenderer {
         }
 
         @Override
-        public void submitBlock(PoseStack poseStack, BlockState state, int packedLight, int packedOverlay, int outlineColor) {
-            Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, bufferSource, packedLight, packedOverlay);
-        }
-
-        @Override
         public void submitMovingBlock(PoseStack poseStack, MovingBlockRenderState movingBlockRenderState) {
         }
 
         @Override
-        public void submitBlockModel(PoseStack poseStack, RenderType renderType, BlockStateModel model, float r, float g, float b, int packedLight, int packedOverlay, int outlineColor) {
-            var vertexConsumer = bufferSource.getBuffer(renderType);
-            ModelBlockRenderer.renderModel(poseStack.last(), vertexConsumer, model, r, g, b, packedLight, packedOverlay);
+        public void submitBreakingBlockModel(PoseStack poseStack, BlockStateModel model, long seed, int progress) {
         }
 
         @Override
-        public void submitItem(PoseStack poseStack, ItemDisplayContext displayContext, int packedLight, int packedOverlay, int outlineColor, int[] tintLayers, List<BakedQuad> quads, RenderType renderType, ItemStackRenderState.FoilType foilType) {
-            ItemRenderer.renderItem(displayContext, poseStack, bufferSource, packedLight, packedOverlay, tintLayers, quads, renderType, foilType);
+        public void submitBlockModel(PoseStack poseStack, RenderType renderType, List<BlockStateModelPart> parts, int[] tintLayers, int packedLight, int packedOverlay, int outlineColor) {
+            var vertexConsumer = bufferSource.getBuffer(renderType);
+            var pose = poseStack.last();
+            var quadInstance = new QuadInstance();
+            quadInstance.setLightCoords(packedLight);
+            quadInstance.setOverlayCoords(packedOverlay);
+
+            for (var part : parts) {
+                for (var direction : Direction.values()) {
+                    for (var quad : part.getQuads(direction)) {
+                        putQuad(pose, quad, quadInstance, tintLayers, vertexConsumer);
+                    }
+                }
+                for (var quad : part.getQuads(null)) {
+                    putQuad(pose, quad, quadInstance, tintLayers, vertexConsumer);
+                }
+            }
+        }
+
+        private static void putQuad(PoseStack.Pose pose, BakedQuad quad, QuadInstance quadInstance, int[] tintLayers, com.mojang.blaze3d.vertex.VertexConsumer buffer) {
+            var tintIndex = quad.materialInfo().tintIndex();
+            var hasTint = tintIndex != -1 && tintIndex < tintLayers.length;
+            quadInstance.setColor(hasTint ? tintLayers[tintIndex] : -1);
+            buffer.putBakedQuad(pose, quad, quadInstance);
+        }
+
+        @Override
+        public void submitItem(PoseStack poseStack, ItemDisplayContext displayContext, int packedLight, int packedOverlay, int outlineColor, int[] tintLayers, List<BakedQuad> quads, ItemStackRenderState.FoilType foilType) {
+            var pose = poseStack.last();
+            var quadInstance = new QuadInstance();
+            quadInstance.setLightCoords(packedLight);
+            quadInstance.setOverlayCoords(packedOverlay);
+
+            for (var quad : quads) {
+                var material = quad.materialInfo();
+                var renderType = material.itemRenderType();
+                var hasTint = material.isTinted();
+                var tintIndex = material.tintIndex();
+                quadInstance.setColor(hasTint && tintIndex >= 0 && tintIndex < tintLayers.length ? tintLayers[tintIndex] : -1);
+                bufferSource.getBuffer(renderType).putBakedQuad(pose, quad, quadInstance);
+            }
         }
 
         @Override
@@ -275,14 +306,32 @@ public class DroneRenderer {
     }
 
     private static int getMaxLight(BlockPos center, Level world) {
-        var bestLight = LevelRenderer.getLightColor(world, center);
-        
+        var bestLight = LevelRenderer.getLightCoords(world, center);
+
         for (var side : FloodFill.GetNeighbors(center)) {
-            var candidate = LevelRenderer.getLightColor(world, side);
+            var candidate = LevelRenderer.getLightCoords(world, side);
             bestLight = Math.max(candidate, bestLight);
         }
-        
+
         return bestLight;
     }
-    
+
+    public static void renderSingleBlock(BlockState state, PoseStack poseStack, ImmediateSubmitNodeCollector collector, ClientLevel world, BlockPos pos, int packedLight, int packedOverlay) {
+        var model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(state);
+        var parts = new ArrayList<BlockStateModelPart>();
+        model.collectParts(RandomSource.create(state.getSeed(pos)), parts);
+        var renderType = model.hasMaterialFlag(BakedQuad.FLAG_TRANSLUCENT) ? Sheets.translucentBlockSheet() : Sheets.cutoutBlockSheet();
+        var tintLayers = computeTintLayers(world, state, pos);
+        collector.submitBlockModel(poseStack, renderType, parts, tintLayers, packedLight, packedOverlay, 0);
+    }
+
+    private static int[] computeTintLayers(ClientLevel world, BlockState state, BlockPos pos) {
+        var sources = Minecraft.getInstance().getBlockColors().getTintSources(state);
+        var tints = new int[sources.size()];
+        for (int i = 0; i < sources.size(); i++) {
+            tints[i] = sources.get(i).colorInWorld(state, world, pos);
+        }
+        return tints;
+    }
+
 }

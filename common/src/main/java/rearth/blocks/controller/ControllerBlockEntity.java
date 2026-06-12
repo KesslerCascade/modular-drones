@@ -51,7 +51,7 @@ public class ControllerBlockEntity extends BlockEntity {
         
         if (frameStart.isEmpty()) return List.of();
         
-        var frameBlocks = FloodFill.Run(level, frameStart.get(), (pos, candidate) -> candidate.is(BlockContent.ASSEMBLER_FRAME), checkPos -> true, 200, false);
+        var frameBlocks = FloodFill.Run(level, frameStart.get(), (pos, candidate) -> candidate.is(BlockContent.ASSEMBLER_FRAME.get()), checkPos -> true, 200, false);
         
         if (frameBlocks.isEmpty()) return List.of();
         
@@ -60,9 +60,9 @@ public class ControllerBlockEntity extends BlockEntity {
     
     public @Nullable DroneData getCurrentDroneData() {
         var frameBlocks = getPlatformBlocks();
-        
+
         if (frameBlocks.isEmpty()) return null;
-        
+
         BlockPos droneStart = null;
         for (var frameBlock : frameBlocks) {
             var frameAbove = frameBlock.above();
@@ -100,7 +100,7 @@ public class ControllerBlockEntity extends BlockEntity {
         var maxRange = 20;
         for (int i = 1; i <= maxRange; i++) {
             var testPos = pos.below(i);
-            if (level.getBlockState(testPos).is(BlockContent.ASSEMBLER_FRAME)) return true;
+            if (level.getBlockState(testPos).is(BlockContent.ASSEMBLER_FRAME.get())) return true;
         }
         
         return false;
@@ -130,16 +130,16 @@ public class ControllerBlockEntity extends BlockEntity {
     
     private Optional<BlockPos> getPlatformStart() {
         for (var neighbor : FloodFill.GetHorizontalNeighbors(worldPosition)) {
-            if (level.getBlockState(neighbor).is(BlockContent.ASSEMBLER_FRAME)) return Optional.of(neighbor);
+            if (level.getBlockState(neighbor).is(BlockContent.ASSEMBLER_FRAME.get())) return Optional.of(neighbor);
         }
-        
+
         return Optional.empty();
     }
     
     public boolean loadDroneToWorld(DroneData data) {
-        
+
         if (getCurrentDroneData() != null) return false;
-        
+
         // see if all blocks could be potentially placed
         // fails if any blocks are occupied
         for (var droneBlockData : data.getBlocks()) {
@@ -169,7 +169,7 @@ public class ControllerBlockEntity extends BlockEntity {
     }
     
     private static boolean isValidDroneBlock(Level level, BlockPos pos, BlockState state) {
-        return !state.isAir() && !state.liquid() && !state.is(BlockContent.ASSEMBLER_FRAME) && !state.is(BlockContent.ASSEMBLER_CONTROLLER)
+        return !state.isAir() && !state.liquid() && !state.is(BlockContent.ASSEMBLER_FRAME.get()) && !state.is(BlockContent.ASSEMBLER_CONTROLLER.get())
           && state.getDestroySpeed(level, pos) >= 0;
     }
     

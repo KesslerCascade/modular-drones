@@ -2,7 +2,7 @@ package rearth.fabric.mixin;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
-import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
+import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import org.spongepowered.asm.mixin.Mixin;
@@ -20,7 +20,7 @@ public abstract class GameRendererMixin {
       method = "<init>",
       at = @At(
         value = "INVOKE",
-        target = "Lnet/minecraft/client/gui/render/GuiRenderer;<init>(Lnet/minecraft/client/gui/render/state/GuiRenderState;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;Ljava/util/List;)V"
+        target = "Lnet/minecraft/client/gui/render/GuiRenderer;<init>(Lnet/minecraft/client/renderer/state/gui/GuiRenderState;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;Ljava/util/List;)V"
       ),
       index = 4
     )
@@ -29,7 +29,7 @@ public abstract class GameRendererMixin {
         var bufferSource = (MultiBufferSource.BufferSource) minecraft.renderBuffers().bufferSource();
 
         var extended = new ArrayList<>(renderers);
-        extended.add(new DroneGuiPreviewRenderer(bufferSource, minecraft.getBlockRenderer(), minecraft.getBlockEntityRenderDispatcher()));
+        extended.add(new DroneGuiPreviewRenderer(bufferSource, minecraft.getBlockEntityRenderDispatcher()));
         return extended;
     }
 }

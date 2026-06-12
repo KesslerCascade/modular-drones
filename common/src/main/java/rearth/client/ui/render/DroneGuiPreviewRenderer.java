@@ -5,11 +5,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderDispatcher;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.EntityBlock;
@@ -17,12 +15,12 @@ import rearth.client.renderers.DroneRenderer;
 
 public class DroneGuiPreviewRenderer extends PictureInPictureRenderer<DroneGuiPreviewRenderState> {
 
-    private final BlockRenderDispatcher blockRenderDispatcher;
+    private static final int FULL_BRIGHT = 0xF000F0;
+
     private final BlockEntityRenderDispatcher blockEntityRenderDispatcher;
 
-    public DroneGuiPreviewRenderer(MultiBufferSource.BufferSource bufferSource, BlockRenderDispatcher blockRenderDispatcher, BlockEntityRenderDispatcher blockEntityRenderDispatcher) {
+    public DroneGuiPreviewRenderer(MultiBufferSource.BufferSource bufferSource, BlockEntityRenderDispatcher blockEntityRenderDispatcher) {
         super(bufferSource);
-        this.blockRenderDispatcher = blockRenderDispatcher;
         this.blockEntityRenderDispatcher = blockEntityRenderDispatcher;
     }
 
@@ -45,7 +43,7 @@ public class DroneGuiPreviewRenderer extends PictureInPictureRenderer<DroneGuiPr
         poseStack.mulPose(Axis.YP.rotationDegrees(state.yRotation()));
 
         var dispatcher = this.blockEntityRenderDispatcher;
-        dispatcher.prepare(minecraft.gameRenderer.getMainCamera());
+        dispatcher.prepare(minecraft.gameRenderer.getMainCamera().position());
 
         var collector = new DroneRenderer.ImmediateSubmitNodeCollector(this.bufferSource);
         var cameraRenderState = new CameraRenderState();
@@ -57,7 +55,7 @@ public class DroneGuiPreviewRenderer extends PictureInPictureRenderer<DroneGuiPr
             poseStack.pushPose();
             poseStack.translate(-0.5 + localPos.getX(), -0.5 + localPos.getY(), -0.5 + localPos.getZ());
 
-            this.blockRenderDispatcher.renderSingleBlock(blockState, poseStack, this.bufferSource, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+            DroneRenderer.renderSingleBlock(blockState, poseStack, collector, minecraft.level, new BlockPos(localPos), FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
 
             if (blockState.getBlock() instanceof EntityBlock blockEntityProvider) {
                 var blockEntity = blockEntityProvider.newBlockEntity(new BlockPos(localPos), blockState);

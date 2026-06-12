@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Renderable;
@@ -106,7 +106,7 @@ public class DroneCreatorScreen extends Screen {
     }
     
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         var textColor = 0xFF000000 | 13685204;
         
         var centerX = this.width / 2;
@@ -119,11 +119,11 @@ public class DroneCreatorScreen extends Screen {
         renderPreview(context, backgroundStartX, backgroundStartY);
         
         for (var drawable : this.renderables) {
-            drawable.render(context, mouseX, mouseY, delta);
+            drawable.extractRenderState(context, mouseX, mouseY, delta);
         }
         
-        context.drawString(this.font, Component.literal("Speed:"), backgroundStartX + 161, backgroundStartY + 13, textColor, false);
-        context.drawString(this.font, Component.literal("Size:"), backgroundStartX + 161, backgroundStartY + 44, textColor, false);
+        context.text(this.font, Component.literal("Speed:"), backgroundStartX + 161, backgroundStartY + 13, textColor, false);
+        context.text(this.font, Component.literal("Size:"), backgroundStartX + 161, backgroundStartY + 44, textColor, false);
         
         // render bars
         var greenColor = -12810969;
@@ -180,13 +180,13 @@ public class DroneCreatorScreen extends Screen {
             }
             
             var renderedItem = DroneBehaviour.getItem(ability);
-            context.renderFakeItem(new ItemStack(renderedItem), startAtX + 2, abilitiesStartY + 2);
+            context.fakeItem(new ItemStack(renderedItem), startAtX + 2, abilitiesStartY + 2);
             
             index++;
         }
         
         if (index == 0) {
-            context.drawString(this.font, Component.literal("No Abilities"), abilitiesStartX + 5, abilitiesStartY + 7, textColor, false);
+            context.text(this.font, Component.literal("No Abilities"), abilitiesStartX + 5, abilitiesStartY + 7, textColor, false);
         }
         
         this.openTime += delta;
@@ -194,7 +194,7 @@ public class DroneCreatorScreen extends Screen {
         
     }
     
-    private void drawBarPart(GuiGraphics context, int backgroundStartX, int backgroundStartY, float fillStart, float fillEnd, int color, int height, int yOffset) {
+    private void drawBarPart(GuiGraphicsExtractor context, int backgroundStartX, int backgroundStartY, float fillStart, float fillEnd, int color, int height, int yOffset) {
         var speedFromX = backgroundStartX + 161 + (int) (124 * fillStart);
         var speedFromY = backgroundStartY + 26 + yOffset;
         var speedToX = backgroundStartX + 161 + (int) (124 * fillEnd);
@@ -202,7 +202,7 @@ public class DroneCreatorScreen extends Screen {
         context.fill(speedFromX, speedFromY, speedToX, speedToY, color);
     }
 
-    private void renderPreview(GuiGraphics context, int backgroundStartX, int backgroundStartY) {
+    private void renderPreview(GuiGraphicsExtractor context, int backgroundStartX, int backgroundStartY) {
         var x0 = backgroundStartX + 5;
         var y0 = backgroundStartY + 5;
         var width = 140;
@@ -219,7 +219,7 @@ public class DroneCreatorScreen extends Screen {
           null
         );
 
-        ((GuiGraphicsAccessor) context).drones$getGuiRenderState().submitPicturesInPictureState(renderState);
+        ((GuiGraphicsAccessor) context).drones$getGuiRenderState().addPicturesInPictureState(renderState);
     }
 
     @Override
@@ -315,7 +315,7 @@ public class DroneCreatorScreen extends Screen {
         
         @SuppressWarnings("lossy-conversions")
         @Override
-        protected void renderContents(GuiGraphics context, int mouseX, int mouseY, float delta) {
+        protected void extractContents(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
             
             var usedTexture = BIG_BUTTON_TEXTURE;
             
@@ -348,7 +348,7 @@ public class DroneCreatorScreen extends Screen {
             textX /= scale;
             textY /= scale;
 
-            context.drawString(Minecraft.getInstance().font, this.getMessage(), textX, textY, textColor, false);
+            context.text(Minecraft.getInstance().font, this.getMessage(), textX, textY, textColor, false);
 
             context.pose().popMatrix();
         }
