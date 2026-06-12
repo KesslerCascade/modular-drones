@@ -8,6 +8,8 @@ import rearth.drone.DroneData;
 import rearth.drone.RecordedBlock;
 import rearth.drone.behaviour.DroneBehaviour;
 import rearth.drone.behaviour.DroneBehaviour.BlockFunctions;
+import rearth.client.ui.render.DroneGuiPreviewRenderState;
+import rearth.mixin.GuiGraphicsAccessor;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +29,7 @@ import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -36,13 +38,13 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 
 public class DroneCreatorScreen extends Screen {
     
-    private static final ResourceLocation BACKGROUND_TEXTURE = Drones.id("textures/gui/assembler.png");
+    private static final Identifier BACKGROUND_TEXTURE = Drones.id("textures/gui/assembler.png");
     
-    private static final ResourceLocation BIG_BUTTON_TEXTURE = Drones.id("textures/gui/big_button.png");
-    private static final ResourceLocation BIG_BUTTON_HOVER_TEXTURE = Drones.id("textures/gui/big_button_hover.png");
-    private static final ResourceLocation BIG_BUTTON_PRESSED_TEXTURE = Drones.id("textures/gui/big_button_pressed.png");
+    private static final Identifier BIG_BUTTON_TEXTURE = Drones.id("textures/gui/big_button.png");
+    private static final Identifier BIG_BUTTON_HOVER_TEXTURE = Drones.id("textures/gui/big_button_hover.png");
+    private static final Identifier BIG_BUTTON_PRESSED_TEXTURE = Drones.id("textures/gui/big_button_pressed.png");
     
-    private static final ResourceLocation SLOT_PANEL_TEXTURE = Drones.id("textures/gui/slot_panel.png");
+    private static final Identifier SLOT_PANEL_TEXTURE = Drones.id("textures/gui/slot_panel.png");
     
     private final DroneData droneData;
     private final HashMap<Vec3i, BlockEntity> renderedEntities = new HashMap<>();
@@ -114,11 +116,7 @@ public class DroneCreatorScreen extends Screen {
         
         context.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND_TEXTURE, backgroundStartX, backgroundStartY, 0.0F, 0.0F, 300, 183, 300, 183);
 
-        /* Disabled pending 1.21.11 rewrite
-        for (var pair : droneData.getBlocks()) {
-            var entity = renderedEntities.get(pair.localPos());
-            renderBlock(context, pair.localPos(), pair.state(), entity, delta);
-        } */
+        renderPreview(context, backgroundStartX, backgroundStartY);
         
         for (var drawable : this.renderables) {
             drawable.render(context, mouseX, mouseY, delta);
@@ -204,86 +202,25 @@ public class DroneCreatorScreen extends Screen {
         context.fill(speedFromX, speedFromY, speedToX, speedToY, color);
     }
 
-    /* 3D rendered preview is temporarily disabled pending a full rewrite in 1.21.11 for a PictureInPictureRenderer
-     * mixin implementation.
-     *
-    private void renderBlock(GuiGraphics context, Vec3i offset, BlockState state, @Nullable BlockEntity entity, float partialTicks) {
+    private void renderPreview(GuiGraphics context, int backgroundStartX, int backgroundStartY) {
+        var x0 = backgroundStartX + 5;
+        var y0 = backgroundStartY + 5;
+        var width = 140;
+        var height = 140;
 
-        var x = this.width / 2 - (300 / 2) + 70;
-        var y = this.height / 2 - 30;
-
-        var size = 20;
         var rotation = (openTime * 2) % 360;
 
-        var scale = droneData.getRenderScale();
-
-        var matrices = new PoseStack();
-
-        matrices.translate(x + size / 2f, y + size / 2f, 400);
-        matrices.scale(40 * size / 64f, -40 * size / 64f, 40);
-        matrices.scale(scale, scale, scale);
-
-        matrices.mulPose(Axis.XP.rotationDegrees(30 + previewAngle));
-        matrices.mulPose(Axis.YP.rotationDegrees(45 + 180 + rotation));
-
-        matrices.translate(-.5 + offset.getX(), -.5 + offset.getY(), -.5 + offset.getZ());
-
-        final var vertexConsumers = minecraft.renderBuffers().bufferSource();
-        this.minecraft.getBlockRenderer().renderSingleBlock(
-          state, matrices, vertexConsumers, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY
+        var renderState = new DroneGuiPreviewRenderState(
+          droneData,
+          30 + previewAngle,
+          45 + 180 + rotation,
+          x0, y0, x0 + width, y0 + height,
+          15f,
+          null
         );
 
-        if (entity != null) {
-            var dispatcher = this.minecraft.getBlockEntityRenderDispatcher();
-            var entityRenderer = dispatcher.getRenderer(entity);
-            if (entityRenderer != null) {
-                dispatcher.prepare(this.minecraft.gameRenderer.getMainCamera());
-                var renderState = dispatcher.tryExtractRenderState(entity, partialTicks, null);
-                if (renderState != null) {
-                    var collector = new DroneRenderer.ImmediateSubmitNodeCollector(vertexConsumers);
-                    dispatcher.submit(renderState, matrices, collector, new CameraRenderState());
-                }
-            }
-        }
-
-        vertexConsumers.endBatch();
-        this.minecraft.gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
+        ((GuiGraphicsAccessor) context).drones$getGuiRenderState().submitPicturesInPictureState(renderState);
     }
-
-    private static void drawItem(GuiGraphics context, Item item, int x, int y, int size) {
-        var client = Minecraft.getInstance();
-        var entityBuffers = client.renderBuffers().bufferSource();
-        var stack = new ItemStack(item);
-
-        var itemRenderState = new ItemStackRenderState();
-        client.getItemModelResolver().updateForTopItem(itemRenderState, stack, ItemDisplayContext.GUI, client.level, null, 0);
-
-        final boolean notSideLit = !itemRenderState.usesBlockLight();
-        if (notSideLit) {
-            client.gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_FLAT);
-        }
-
-        var matrices = new PoseStack();
-
-        // Translate to the root of the component
-        matrices.translate(x, y, 100);
-
-        // Scale according to component size and translate to the center
-        matrices.scale(size / 16f, size / 16f, 1);
-        matrices.translate(8.0, 8.0, 0.0);
-
-        // Vanilla scaling and y inversion
-        matrices.scale(16, -16, 16);
-
-        var collector = new DroneRenderer.ImmediateSubmitNodeCollector(entityBuffers);
-        itemRenderState.submit(matrices, collector, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, -1);
-        entityBuffers.endBatch();
-
-        if (notSideLit) {
-            client.gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
-        }
-    }
-    */
 
     @Override
     public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double deltaX, double deltaY) {
@@ -378,7 +315,7 @@ public class DroneCreatorScreen extends Screen {
         
         @SuppressWarnings("lossy-conversions")
         @Override
-        protected void renderWidget(GuiGraphics context, int mouseX, int mouseY, float delta) {
+        protected void renderContents(GuiGraphics context, int mouseX, int mouseY, float delta) {
             
             var usedTexture = BIG_BUTTON_TEXTURE;
             

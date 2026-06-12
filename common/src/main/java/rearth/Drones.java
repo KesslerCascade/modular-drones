@@ -10,7 +10,7 @@ import rearth.init.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class Drones {
     public static final String MOD_ID = "drones";
@@ -18,8 +18,8 @@ public final class Drones {
     
     public static final List<Runnable> DELAYED_ACTIONS = new ArrayList<>();
     
-    public static ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
+    public static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(MOD_ID, path);
     }
 
     public static void init() {

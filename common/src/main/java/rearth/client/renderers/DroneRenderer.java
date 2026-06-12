@@ -24,7 +24,7 @@ import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.MovingBlockRenderState;
 import net.minecraft.client.renderer.block.ModelBlockRenderer;
@@ -33,7 +33,6 @@ import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.client.renderer.entity.state.HitboxesRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.state.CameraRenderState;
@@ -64,8 +63,8 @@ public class DroneRenderer {
         if (world == null) return;
 
         var cameraRenderState = new CameraRenderState();
-        cameraRenderState.pos = camera.getPosition();
-        cameraRenderState.blockPos = camera.getBlockPosition();
+        cameraRenderState.pos = camera.position();
+        cameraRenderState.blockPos = camera.blockPosition();
 
         var collector = new ImmediateSubmitNodeCollector(vertexConsumers);
         
@@ -118,7 +117,7 @@ public class DroneRenderer {
             lastRotations.put(dronePlayer, deltaDroneRot);
             
             matrices.pushPose();
-            matrices.translate(-camera.getPosition().x, -camera.getPosition().y, -camera.getPosition().z);
+            matrices.translate(-camera.position().x, -camera.position().y, -camera.position().z);
             matrices.translate(deltaDronePos.x, deltaDronePos.y, deltaDronePos.z);
             matrices.mulPose(Axis.XP.rotationDegrees((float) -deltaDroneRot.x));
             matrices.mulPose(Axis.ZP.rotationDegrees((float) -deltaDroneRot.z));
@@ -210,10 +209,6 @@ public class DroneRenderer {
         @Override
         public OrderedSubmitNodeCollector order(int order) {
             return this;
-        }
-
-        @Override
-        public void submitHitbox(PoseStack poseStack, EntityRenderState entityRenderState, HitboxesRenderState hitboxesRenderState) {
         }
 
         @Override

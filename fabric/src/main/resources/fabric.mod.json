@@ -27,13 +27,14 @@
     ]
   },
   "mixins": [
-    "drones.mixins.json"
+    "drones.mixins.json",
+    "drones-fabric.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.19.3",
-    "minecraft": "~1.21.10",
+    "minecraft": "~1.21.11",
     "java": ">=21",
-    "architectury": ">=18.0.8",
+    "architectury": ">=19.0.1",
     "fabric-api": "*"
   },
   "suggests": {
