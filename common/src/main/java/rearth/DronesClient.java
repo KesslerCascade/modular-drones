@@ -12,7 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderType;
+import dev.architectury.registry.client.rendering.RenderTypeRegistry;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -20,7 +21,7 @@ import net.minecraft.world.level.block.Block;
 
 public final class DronesClient {
     
-    public static Map<Supplier<Block>, RenderType> RENDER_LAYERS = new HashMap<>();  // this is used in client-specific parts to set render layers
+    public static Map<Supplier<Block>, ChunkSectionLayer> RENDER_LAYERS = new HashMap<>();  // this is used in client-specific parts to set render layers
     
     public static final HashMap<Integer, NetworkContent.DroneMoveSyncPacket> CURRENT_DATA = new HashMap<>();
     public static final HashMap<Integer, ItemStack> CARRIED_ITEMS = new HashMap<>();
@@ -30,10 +31,14 @@ public final class DronesClient {
         
         NetworkAggregator.registerReceiver(NetworkManager.Side.S2C, NetworkContent.OpenDroneScreenPacket.PAYLOAD_ID, NetworkContent.OpenDroneScreenPacket.PACKET_CODEC, List.of(), DronesClient::onAssembleScreenPacket);
         
-        RENDER_LAYERS.put(BlockContent.WOOD_ROTOR, RenderType.cutout());
-        RENDER_LAYERS.put(BlockContent.IRON_ROTOR, RenderType.cutout());
-        RENDER_LAYERS.put(BlockContent.ION_THRUSTER, RenderType.cutout());
-        
+        RENDER_LAYERS.put(BlockContent.WOOD_ROTOR, ChunkSectionLayer.CUTOUT);
+        RENDER_LAYERS.put(BlockContent.IRON_ROTOR, ChunkSectionLayer.CUTOUT);
+        RENDER_LAYERS.put(BlockContent.ION_THRUSTER, ChunkSectionLayer.CUTOUT);
+
+        for (var entry : RENDER_LAYERS.entrySet()) {
+            RenderTypeRegistry.register(entry.getValue(), entry.getKey().get());
+        }
+
     }
     
     public static void onAssembleScreenPacket(NetworkContent.OpenDroneScreenPacket packet, NetworkManager.PacketContext context) {

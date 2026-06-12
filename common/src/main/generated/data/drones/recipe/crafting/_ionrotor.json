@@ -2,15 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "c": {
-      "item": "minecraft:diamond"
-    },
-    "i": {
-      "item": "minecraft:stick"
-    },
-    "o": {
-      "item": "minecraft:iron_ingot"
-    }
+    "c": "minecraft:diamond",
+    "i": "minecraft:stick",
+    "o": "minecraft:iron_ingot"
   },
   "pattern": [
     "oio",

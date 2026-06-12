@@ -30,10 +30,10 @@
     "drones.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.17.2",
-    "minecraft": "~1.21.1",
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~1.21.10",
     "java": ">=21",
-    "architectury": ">=13.0.8",
+    "architectury": ">=18.0.8",
     "fabric-api": "*"
   },
   "suggests": {

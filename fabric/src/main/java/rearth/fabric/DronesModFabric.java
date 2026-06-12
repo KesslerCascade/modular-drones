@@ -15,7 +15,7 @@ public final class DronesModFabric implements ModInitializer {
         Drones.init();
         
         AttackBlockCallback.EVENT.register(((playerEntity, world, hand, blockPos, direction) -> {
-            if (!world.isClientSide)
+            if (!world.isClientSide())
                 DroneController.onPlayerBlockBreakStart(playerEntity, blockPos);
             return InteractionResult.PASS;
         }));

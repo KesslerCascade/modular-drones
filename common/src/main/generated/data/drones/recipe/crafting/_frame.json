@@ -2,21 +2,11 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "b": {
-      "item": "minecraft:smooth_stone"
-    },
-    "c": {
-      "item": "minecraft:iron_ingot"
-    },
-    "f": {
-      "item": "minecraft:smooth_stone"
-    },
-    "m": {
-      "tag": "minecraft:logs"
-    },
-    "s": {
-      "item": "minecraft:smooth_stone"
-    }
+    "b": "minecraft:smooth_stone",
+    "c": "minecraft:iron_ingot",
+    "f": "minecraft:smooth_stone",
+    "m": "#minecraft:logs",
+    "s": "minecraft:smooth_stone"
   },
   "pattern": [
     "fff",

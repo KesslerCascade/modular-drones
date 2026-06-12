@@ -33,7 +33,7 @@ public class BeamAttackBehaviour extends ArrowAttackBehaviour {
     public boolean performAttack(double dist, Vec3 shotFrom) {
         var world = this.owner.level();
         
-        this.target.hurt(new DamageSource(world.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(DamageTypes.PLAYER_ATTACK)), ATTACK_DAMAGE);
+        this.target.hurt(new DamageSource(world.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(DamageTypes.PLAYER_ATTACK)), ATTACK_DAMAGE);
         
         world.playSound(null, owner.blockPosition(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 0.5f, 1.7f);
         

@@ -20,45 +20,45 @@ public class BlockTagGenerator extends FabricTagProvider<Block> {
     
     @Override
     protected void addTags(HolderLookup.Provider wrapperLookup) {
-        
-        var pickaxeBuilder = getOrCreateTagBuilder(BlockTags.MINEABLE_WITH_PICKAXE);
-        
+
+        var pickaxeBuilder = builder(BlockTags.MINEABLE_WITH_PICKAXE);
+
         for (var supplier : BlockContent.BLOCKS) {
-            pickaxeBuilder.add(supplier.get());
+            pickaxeBuilder.add(supplier.get().builtInRegistryHolder().key());
         }
-        
-        getOrCreateTagBuilder(TagContent.THRUSTER_BLOCKS)
+
+        builder(TagContent.THRUSTER_BLOCKS)
           .addOptionalTag(TagContent.LOW_THRUSTER)
           .addOptionalTag(TagContent.MEDIUM_THRUSTER)
           .addOptionalTag(TagContent.HIGH_THRUSTER)
           .addOptionalTag(TagContent.ULTRA_THRUSTER);
-        
-        getOrCreateTagBuilder(TagContent.LOW_THRUSTER)
+
+        builder(TagContent.LOW_THRUSTER)
           .addOptionalTag(BlockTags.WOODEN_TRAPDOORS)
-          .add(BlockContent.WOOD_ROTOR.get());
-        
-        getOrCreateTagBuilder(TagContent.MEDIUM_THRUSTER)
-          .add(Blocks.IRON_TRAPDOOR)
-          .add(BlockContent.IRON_ROTOR.get());
-        
-        getOrCreateTagBuilder(TagContent.HIGH_THRUSTER)
-          .add(BlockContent.ION_THRUSTER.get());
-        
-        getOrCreateTagBuilder(TagContent.ARROW_LAUNCHER)
-          .add(Blocks.DISPENSER);
-        
-        getOrCreateTagBuilder(TagContent.MELEE_DAMAGE)
-          .add(Blocks.MAGMA_BLOCK)
-          .add(Blocks.CACTUS);
-        
-        getOrCreateTagBuilder(TagContent.PICKUP_TOOLS)
-          .add(Blocks.LODESTONE);
-        
-        getOrCreateTagBuilder(TagContent.BEAM_SOURCE)
-          .add(Blocks.BEACON);
-        
-        getOrCreateTagBuilder(TagContent.MINING_TOOLS)
-          .add(BlockContent.DRILL.get());
-        
+          .add(BlockContent.WOOD_ROTOR.get().builtInRegistryHolder().key());
+
+        builder(TagContent.MEDIUM_THRUSTER)
+          .add(Blocks.IRON_TRAPDOOR.builtInRegistryHolder().key())
+          .add(BlockContent.IRON_ROTOR.get().builtInRegistryHolder().key());
+
+        builder(TagContent.HIGH_THRUSTER)
+          .add(BlockContent.ION_THRUSTER.get().builtInRegistryHolder().key());
+
+        builder(TagContent.ARROW_LAUNCHER)
+          .add(Blocks.DISPENSER.builtInRegistryHolder().key());
+
+        builder(TagContent.MELEE_DAMAGE)
+          .add(Blocks.MAGMA_BLOCK.builtInRegistryHolder().key())
+          .add(Blocks.CACTUS.builtInRegistryHolder().key());
+
+        builder(TagContent.PICKUP_TOOLS)
+          .add(Blocks.LODESTONE.builtInRegistryHolder().key());
+
+        builder(TagContent.BEAM_SOURCE)
+          .add(Blocks.BEACON.builtInRegistryHolder().key());
+
+        builder(TagContent.MINING_TOOLS)
+          .add(BlockContent.DRILL.get().builtInRegistryHolder().key());
+
     }
 }

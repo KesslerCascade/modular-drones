@@ -3,8 +3,6 @@ package rearth.drone;
 import com.mojang.datafixers.util.Pair;
 import dev.architectury.event.EventResult;
 import dev.architectury.networking.NetworkManager;
-import dev.architectury.platform.Platform;
-import io.wispforest.accessories.api.AccessoriesContainer;
 import org.jetbrains.annotations.Nullable;
 import rearth.drone.behaviour.*;
 import rearth.init.CarriedItemComponent;
@@ -296,40 +294,13 @@ public class DroneController {
 
     /**
      * Finds the live ItemStack reference for the drone item worn by the given
-     * player, checking HEAD slot, accessories:drone, and accessories:head cosmetic.
+     * player, checking the HEAD slot and the Trinkets/Curios accessory slot.
      */
     public static Optional<ItemStack> findDroneItemStack(Player playerEntity) {
         var headStack = playerEntity.getItemBySlot(EquipmentSlot.HEAD);
         if (headStack.is(ItemContent.POCKET_DRONE.get())
                 && headStack.has(ComponentContent.DRONE_DATA_TYPE.get())) {
             return Optional.of(headStack);
-        }
-
-        if (Platform.isModLoaded("accessories") && playerEntity.accessoriesCapability() != null
-                && playerEntity.accessoriesCapability().getContainers() != null) {
-            var containers = playerEntity.accessoriesCapability().getContainers();
-
-            var droneSlot = containers.get("drone");
-            if (droneSlot != null) {
-                for (var pair : droneSlot.getAccessories()) {
-                    var candidate = pair.getSecond();
-                    if (candidate.is(ItemContent.POCKET_DRONE.get())
-                            && candidate.has(ComponentContent.DRONE_DATA_TYPE.get())) {
-                        return Optional.of(candidate);
-                    }
-                }
-            }
-
-            var headCosmetic = containers.get("accessories:head");
-            if (headCosmetic != null) {
-                for (var pair : headCosmetic.getCosmeticAccessories()) {
-                    var candidate = pair.getSecond();
-                    if (candidate.is(ItemContent.POCKET_DRONE.get())
-                            && candidate.has(ComponentContent.DRONE_DATA_TYPE.get())) {
-                        return Optional.of(candidate);
-                    }
-                }
-            }
         }
 
         var accessorySlotItem = AccessorySlots.findDroneSlotItem(playerEntity);
@@ -341,7 +312,8 @@ public class DroneController {
 
     /**
      * Persists the drone's carried item into the PocketDrone ItemStack's component
-     * data, so it survives server restarts. Covers HEAD slot and Accessories slots.
+     * data, so it survives server restarts. Covers the HEAD slot and the
+     * Trinkets/Curios accessory slot.
      */
     public static void saveCarriedItemToStack(Player owner, ItemStack carriedItem) {
         var droneStack = findDroneItemStack(owner);

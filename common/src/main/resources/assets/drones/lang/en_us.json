@@ -33,8 +33,13 @@
   "block.drones.iron_rotor": "Advanced Rotor",
   "block.drones.ion_thruster": "Ion Thruster",
   "block.drones.drill": "Drill",
+  "item.drones.frame": "Assembly Frame",
+  "item.drones.controller": "Drone Assembly Controller",
+  "item.drones.wood_rotor": "Wooden Rotor",
+  "item.drones.iron_rotor": "Advanced Rotor",
+  "item.drones.ion_thruster": "Ion Thruster",
+  "item.drones.drill": "Drill",
   "tooltip.drones.builder": "Used to create a modular drone. Place this next to an assembly frame, and then build a drone on that frame.",
-  "accessories.slot.drone": "Drone",
   "trinkets.slot.drone.drone": "Drone",
   "curios.identifier.drone": "Drone"
 }

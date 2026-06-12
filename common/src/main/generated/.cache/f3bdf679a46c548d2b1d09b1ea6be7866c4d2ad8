@@ -1,11 +1,11 @@
-// 1.21.1	2025-10-20T19:51:34.8116732	Modular Drones/Tags for minecraft:block
-0a304772223e330661e37b821aa55770cefe2efc data\drones\tags\block\thruster.json
-6babd859d9cd9501c8fb29bc58ba660431cc522e data\drones\tags\block\arrow_launcher.json
-5fc17c75899f449422b5c0fc7a5abd75ce4665f3 data\drones\tags\block\mining_tools.json
-3390035a29303a746ec4e8ac1a81578e36cd31d0 data\drones\tags\block\medium_thruster.json
-04ce5de11b482132517d63af08aae269d1055025 data\drones\tags\block\beam_source.json
-70ba04cfbc181ef062dcf604583c1a7903149023 data\drones\tags\block\pickup_tools.json
-8933f50607be96a9d2011ed67fc340cb64fda81a data\drones\tags\block\strong_thruster.json
-e08c43d8c15fd507cb489eeaf0f0a2dfc6ff2b35 data\minecraft\tags\block\mineable\pickaxe.json
-077299e1240188e537158bcea3ef71dc684f4070 data\drones\tags\block\low_thruster.json
-95947e737be480fff2428f033685246a8d73143f data\drones\tags\block\melee_damage.json
+// 1.21.10	-999999999-01-01T00:00:00	Modular Drones/Tags for minecraft:block
+6babd859d9cd9501c8fb29bc58ba660431cc522e data/drones/tags/block/arrow_launcher.json
+04ce5de11b482132517d63af08aae269d1055025 data/drones/tags/block/beam_source.json
+8132cb5c1576c39ab4ff5e492c49510ff050e05d data/drones/tags/block/low_thruster.json
+3390035a29303a746ec4e8ac1a81578e36cd31d0 data/drones/tags/block/medium_thruster.json
+95947e737be480fff2428f033685246a8d73143f data/drones/tags/block/melee_damage.json
+5fc17c75899f449422b5c0fc7a5abd75ce4665f3 data/drones/tags/block/mining_tools.json
+70ba04cfbc181ef062dcf604583c1a7903149023 data/drones/tags/block/pickup_tools.json
+8933f50607be96a9d2011ed67fc340cb64fda81a data/drones/tags/block/strong_thruster.json
+0a304772223e330661e37b821aa55770cefe2efc data/drones/tags/block/thruster.json
+e08c43d8c15fd507cb489eeaf0f0a2dfc6ff2b35 data/minecraft/tags/block/mineable/pickaxe.json

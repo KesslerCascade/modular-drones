@@ -8,19 +8,41 @@ import rearth.init.NetworkContent.DroneMoveSyncPacket;
 import rearth.util.FloodFill;
 import rearth.util.Helpers;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
+import org.jetbrains.annotations.Nullable;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.model.Model;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.block.MovingBlockRenderState;
+import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.entity.state.HitboxesRenderState;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -30,6 +52,7 @@ import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Quaternionf;
 
 public class DroneRenderer {
     
@@ -39,6 +62,12 @@ public class DroneRenderer {
     public static void doRender(PoseStack matrices, Camera camera, MultiBufferSource vertexConsumers) {
         var world = Minecraft.getInstance().level;
         if (world == null) return;
+
+        var cameraRenderState = new CameraRenderState();
+        cameraRenderState.pos = camera.getPosition();
+        cameraRenderState.blockPos = camera.getBlockPosition();
+
+        var collector = new ImmediateSubmitNodeCollector(vertexConsumers);
         
         for (var dronePlayer : world.players()) {
             
@@ -51,7 +80,7 @@ public class DroneRenderer {
             if (movementData == null) return;
             
             // Scale interpolation factor based on frame time
-            var frameTimeTicks = Minecraft.getInstance().getTimer().getGameTimeDeltaTicks();
+            var frameTimeTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaTicks();
             var ftScale = frameTimeTicks * 3.0;
             
             var targetScale = 0.15f * droneData.getRenderScale();
@@ -126,10 +155,14 @@ public class DroneRenderer {
                 // render optional custom entity renderer
                 if (state.getBlock() instanceof EntityBlock blockEntityProvider) {
                     var blockEntity = blockEntityProvider.newBlockEntity(new BlockPos(localOffset), state);
-                    blockEntity.setLevel(world);
-                    var renderer = Minecraft.getInstance().getBlockEntityRenderDispatcher().getRenderer(blockEntity);
-                    if (renderer != null) {
-                        renderer.render(blockEntity, 0, matrices, vertexConsumers, light, OverlayTexture.NO_OVERLAY);
+                    if (blockEntity != null) {
+                        blockEntity.setLevel(world);
+                        var dispatcher = Minecraft.getInstance().getBlockEntityRenderDispatcher();
+                        dispatcher.prepare(camera);
+                        var renderState = dispatcher.tryExtractRenderState(blockEntity, 0, null);
+                        if (renderState != null) {
+                            dispatcher.submit(renderState, matrices, collector, cameraRenderState);
+                        }
                     }
                 }
                 
@@ -142,16 +175,16 @@ public class DroneRenderer {
                 matrices.pushPose();
                 matrices.translate(0, -0.5, 0);
                 var itemLight = getMaxLight(BlockPos.containing(movementData.position()), world);
-                Minecraft.getInstance().getItemRenderer().renderStatic(
+                var itemRenderState = new ItemStackRenderState();
+                Minecraft.getInstance().getItemModelResolver().updateForTopItem(
+                  itemRenderState,
                   carriedItem,
                   ItemDisplayContext.GROUND,
-                  itemLight,
-                  OverlayTexture.NO_OVERLAY,
-                  matrices,
-                  vertexConsumers,
                   world,
+                  null,
                   0
                 );
+                itemRenderState.submit(matrices, collector, itemLight, OverlayTexture.NO_OVERLAY, -1);
                 matrices.popPose();
             }
             
@@ -160,6 +193,92 @@ public class DroneRenderer {
         
     }
     
+    /**
+     * Minimal SubmitNodeCollector adapter that immediately renders submitted geometry into an
+     * existing PoseStack/MultiBufferSource pair, instead of deferring it for later draining.
+     * Only the methods actually used by block entity renderers and item rendering in this mod
+     * are implemented; everything else is a no-op.
+     */
+    public static class ImmediateSubmitNodeCollector implements SubmitNodeCollector, OrderedSubmitNodeCollector {
+
+        private final MultiBufferSource bufferSource;
+
+        public ImmediateSubmitNodeCollector(MultiBufferSource bufferSource) {
+            this.bufferSource = bufferSource;
+        }
+
+        @Override
+        public OrderedSubmitNodeCollector order(int order) {
+            return this;
+        }
+
+        @Override
+        public void submitHitbox(PoseStack poseStack, EntityRenderState entityRenderState, HitboxesRenderState hitboxesRenderState) {
+        }
+
+        @Override
+        public void submitShadow(PoseStack poseStack, float radius, List<EntityRenderState.ShadowPiece> shadowPieces) {
+        }
+
+        @Override
+        public void submitNameTag(PoseStack poseStack, @Nullable Vec3 pos, int packedLight, Component text, boolean seeThrough, int backgroundColor, double distanceSq, CameraRenderState cameraRenderState) {
+        }
+
+        @Override
+        public void submitText(PoseStack poseStack, float x, float y, FormattedCharSequence text, boolean dropShadow, Font.DisplayMode displayMode, int packedLight, int backgroundColor, int color, int outlineColor) {
+        }
+
+        @Override
+        public void submitFlame(PoseStack poseStack, EntityRenderState entityRenderState, Quaternionf quaternionf) {
+        }
+
+        @Override
+        public void submitLeash(PoseStack poseStack, EntityRenderState.LeashState leashState) {
+        }
+
+        @Override
+        public <S> void submitModel(Model<? super S> model, S state, PoseStack poseStack, RenderType renderType, int packedLight, int packedOverlay, int color, @Nullable TextureAtlasSprite sprite, int outlineColor, @Nullable ModelFeatureRenderer.CrumblingOverlay crumblingOverlay) {
+            var vertexConsumer = bufferSource.getBuffer(renderType);
+            model.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay, color);
+        }
+
+        @Override
+        public void submitModelPart(ModelPart modelPart, PoseStack poseStack, RenderType renderType, int packedLight, int packedOverlay, @Nullable TextureAtlasSprite sprite, boolean outline, boolean crumbling, int outlineColor, @Nullable ModelFeatureRenderer.CrumblingOverlay crumblingOverlay, int color) {
+            var vertexConsumer = bufferSource.getBuffer(renderType);
+            modelPart.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
+        }
+
+        @Override
+        public void submitBlock(PoseStack poseStack, BlockState state, int packedLight, int packedOverlay, int outlineColor) {
+            Minecraft.getInstance().getBlockRenderer().renderSingleBlock(state, poseStack, bufferSource, packedLight, packedOverlay);
+        }
+
+        @Override
+        public void submitMovingBlock(PoseStack poseStack, MovingBlockRenderState movingBlockRenderState) {
+        }
+
+        @Override
+        public void submitBlockModel(PoseStack poseStack, RenderType renderType, BlockStateModel model, float r, float g, float b, int packedLight, int packedOverlay, int outlineColor) {
+            var vertexConsumer = bufferSource.getBuffer(renderType);
+            ModelBlockRenderer.renderModel(poseStack.last(), vertexConsumer, model, r, g, b, packedLight, packedOverlay);
+        }
+
+        @Override
+        public void submitItem(PoseStack poseStack, ItemDisplayContext displayContext, int packedLight, int packedOverlay, int outlineColor, int[] tintLayers, List<BakedQuad> quads, RenderType renderType, ItemStackRenderState.FoilType foilType) {
+            ItemRenderer.renderItem(displayContext, poseStack, bufferSource, packedLight, packedOverlay, tintLayers, quads, renderType, foilType);
+        }
+
+        @Override
+        public void submitCustomGeometry(PoseStack poseStack, RenderType renderType, SubmitNodeCollector.CustomGeometryRenderer renderer) {
+            var vertexConsumer = bufferSource.getBuffer(renderType);
+            renderer.render(poseStack.last(), vertexConsumer);
+        }
+
+        @Override
+        public void submitParticleGroup(SubmitNodeCollector.ParticleGroupRenderer particleGroupRenderer) {
+        }
+    }
+
     private static int getMaxLight(BlockPos center, Level world) {
         var bestLight = LevelRenderer.getLightColor(world, center);
         

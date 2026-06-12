@@ -2,21 +2,11 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "b": {
-      "item": "minecraft:repeater"
-    },
-    "c": {
-      "item": "minecraft:iron_ingot"
-    },
-    "f": {
-      "item": "minecraft:smooth_stone"
-    },
-    "m": {
-      "tag": "minecraft:logs"
-    },
-    "s": {
-      "item": "minecraft:redstone"
-    }
+    "b": "minecraft:repeater",
+    "c": "minecraft:iron_ingot",
+    "f": "minecraft:smooth_stone",
+    "m": "#minecraft:logs",
+    "s": "minecraft:redstone"
   },
   "pattern": [
     "fff",

@@ -2,15 +2,9 @@
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "c": {
-      "item": "minecraft:copper_ingot"
-    },
-    "i": {
-      "item": "minecraft:stick"
-    },
-    "o": {
-      "tag": "minecraft:planks"
-    }
+    "c": "minecraft:copper_ingot",
+    "i": "minecraft:stick",
+    "o": "#minecraft:planks"
   },
   "pattern": [
     "oio",

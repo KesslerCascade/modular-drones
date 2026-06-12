@@ -87,7 +87,7 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
                 if (drone.actionCooldown == 0) {
                     // do attack
                     var damage = 2; // todo
-                    target.hurt(new DamageSource(owner.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(DamageTypes.PLAYER_ATTACK), owner), damage);
+                    target.hurt(new DamageSource(owner.level().registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(DamageTypes.PLAYER_ATTACK), owner), damage);
                     drone.actionCooldown = ATTACK_COOLDOWN;
 
                     if (owner.level() instanceof ServerLevel serverWorld) {

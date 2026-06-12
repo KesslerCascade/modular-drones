@@ -27,7 +27,7 @@ public final class DronesModNeoForge {
         @SubscribeEvent
         public static void onPlayerStartBreakingBlock(PlayerInteractEvent.LeftClickBlock event) {
             var world = event.getEntity().level();
-            if (!world.isClientSide)
+            if (!world.isClientSide())
                 DroneController.onPlayerBlockBreakStart(event.getEntity(), event.getPos());
         }
     

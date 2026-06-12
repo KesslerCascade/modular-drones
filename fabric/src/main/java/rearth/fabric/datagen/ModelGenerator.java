@@ -1,12 +1,16 @@
 package rearth.fabric.datagen;
 
+import net.fabricmc.fabric.api.client.datagen.v1.provider.FabricModelProvider;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.fabricmc.fabric.api.datagen.v1.provider.FabricModelProvider;
-import net.minecraft.data.models.BlockModelGenerators;
-import net.minecraft.data.models.ItemModelGenerators;
-import net.minecraft.data.models.model.ModelTemplates;
-import net.minecraft.data.models.model.TextureMapping;
-import net.minecraft.data.models.model.TextureSlot;
+import net.minecraft.client.data.models.BlockModelGenerators;
+import net.minecraft.client.data.models.ItemModelGenerators;
+import net.minecraft.client.data.models.MultiVariant;
+import net.minecraft.client.data.models.blockstates.MultiVariantGenerator;
+import net.minecraft.client.data.models.model.ModelTemplates;
+import net.minecraft.client.data.models.model.TextureMapping;
+import net.minecraft.client.data.models.model.TextureSlot;
+import net.minecraft.client.renderer.block.model.Variant;
+import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.level.block.Block;
 import rearth.init.BlockContent;
 import rearth.init.ItemContent;
@@ -42,7 +46,9 @@ public class ModelGenerator extends FabricModelProvider {
                            .put(TextureSlot.EAST, TextureMapping.getBlockTexture(block, "_side"))
                            .put(TextureSlot.WEST, TextureMapping.getBlockTexture(block, "_side"));
         
+        var modelLocation = ModelTemplates.CUBE.create(block, textureMap, blockStateModelGenerator.modelOutput);
+        var multiVariant = new MultiVariant(WeightedList.of(new Variant(modelLocation)));
         blockStateModelGenerator.blockStateOutput.accept(
-          BlockModelGenerators.createSimpleBlock(block, ModelTemplates.CUBE.create(block, textureMap,blockStateModelGenerator.modelOutput)));
+          MultiVariantGenerator.dispatch(block, multiVariant));
     }
 }

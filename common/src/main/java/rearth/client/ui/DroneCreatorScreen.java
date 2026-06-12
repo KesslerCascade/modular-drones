@@ -1,13 +1,7 @@
 package rearth.client.ui;
 
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import dev.architectury.networking.NetworkManager;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
 import rearth.Drones;
 import rearth.blocks.controller.ControllerBlockEntity;
 import rearth.drone.DroneData;
@@ -16,6 +10,7 @@ import rearth.drone.behaviour.DroneBehaviour;
 import rearth.drone.behaviour.DroneBehaviour.BlockFunctions;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -25,11 +20,7 @@ import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource.BufferSource;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.sounds.SoundManager;
@@ -39,12 +30,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.EntityBlock;
-import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
 
 public class DroneCreatorScreen extends Screen {
     
@@ -117,21 +105,20 @@ public class DroneCreatorScreen extends Screen {
     
     @Override
     public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context, mouseX, mouseY, delta);
-        
-        var textColor = 13685204;
+        var textColor = 0xFF000000 | 13685204;
         
         var centerX = this.width / 2;
         var centerY = this.height / 2;
         var backgroundStartX = centerX - (300 / 2);
         var backgroundStartY = centerY - (183 / 2);
         
-        context.blit(BACKGROUND_TEXTURE, backgroundStartX, backgroundStartY, 0, 0, 0, 300, 183, 300, 183);
-        
+        context.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND_TEXTURE, backgroundStartX, backgroundStartY, 0.0F, 0.0F, 300, 183, 300, 183);
+
+        /* Disabled pending 1.21.11 rewrite
         for (var pair : droneData.getBlocks()) {
             var entity = renderedEntities.get(pair.localPos());
             renderBlock(context, pair.localPos(), pair.state(), entity, delta);
-        }
+        } */
         
         for (var drawable : this.renderables) {
             drawable.render(context, mouseX, mouseY, delta);
@@ -175,24 +162,27 @@ public class DroneCreatorScreen extends Screen {
             
             var startAtX = abilitiesStartX + index * (20 + 3);
             
-            context.blit(SLOT_PANEL_TEXTURE, startAtX, abilitiesStartY, 0, 0, 0, 20, 20, 20, 20);
+            context.blit(RenderPipelines.GUI_TEXTURED, SLOT_PANEL_TEXTURE, startAtX, abilitiesStartY, 0.0F, 0.0F, 20, 20, 20, 20);
             
             var isHovered = mouseX > startAtX && mouseX < startAtX + 20 && mouseY > abilitiesStartY && mouseY < abilitiesStartY + 20;
             if (isHovered) {
-                
-                context.renderTooltip(this.font, Component.translatable("drones.ability." + ability.name().toLowerCase()), startAtX, abilitiesStartY + 40);
-                
+
+                var tooltipLines = new java.util.ArrayList<Component>();
+                tooltipLines.add(Component.translatable("drones.ability." + ability.name().toLowerCase()));
+
                 for (int i = 0; i < 5; i++) {
                     var tooltipKey = "drones.ability." + ability.name().toLowerCase() + "." + i;
                     if (I18n.exists(tooltipKey)) {
-                        context.renderTooltip(this.font, Component.translatable(tooltipKey), startAtX, abilitiesStartY + 40 + 11 + i * 10);
+                        tooltipLines.add(Component.translatable(tooltipKey));
                     }
                 }
-                
+
+                context.setTooltipForNextFrame(this.font, tooltipLines, Optional.empty(), startAtX, abilitiesStartY + 40);
+
             }
             
             var renderedItem = DroneBehaviour.getItem(ability);
-            drawItem(context, renderedItem, startAtX + 2, abilitiesStartY + 2, 16);
+            context.renderFakeItem(new ItemStack(renderedItem), startAtX + 2, abilitiesStartY + 2);
             
             index++;
         }
@@ -211,74 +201,114 @@ public class DroneCreatorScreen extends Screen {
         var speedFromY = backgroundStartY + 26 + yOffset;
         var speedToX = backgroundStartX + 161 + (int) (124 * fillEnd);
         var speedToY = speedFromY + height;
-        context.fill(speedFromX, speedFromY, speedToX, speedToY, 10, color);
+        context.fill(speedFromX, speedFromY, speedToX, speedToY, color);
     }
-    
+
+    /* 3D rendered preview is temporarily disabled pending a full rewrite in 1.21.11 for a PictureInPictureRenderer
+     * mixin implementation.
+     *
     private void renderBlock(GuiGraphics context, Vec3i offset, BlockState state, @Nullable BlockEntity entity, float partialTicks) {
-        
+
         var x = this.width / 2 - (300 / 2) + 70;
         var y = this.height / 2 - 30;
-        
+
         var size = 20;
         var rotation = (openTime * 2) % 360;
-        
+
         var scale = droneData.getRenderScale();
-        
-        context.pose().pushPose();
-        
-        context.pose().translate(x + size / 2f, y + size / 2f, 400);
-        context.pose().scale(40 * size / 64f, -40 * size / 64f, 40);
-        context.pose().scale(scale, scale, scale);
-        
-        context.pose().mulPose(Axis.XP.rotationDegrees(30 + previewAngle));
-        context.pose().mulPose(Axis.YP.rotationDegrees(45 + 180 + rotation));
-        
-        context.pose().translate(-.5 + offset.getX(), -.5 + offset.getY(), -.5 + offset.getZ());
-        
-        RenderSystem.runAsFancy(() -> {
-            final var vertexConsumers = minecraft.renderBuffers().bufferSource();
-            if (state.getRenderShape() != RenderShape.ENTITYBLOCK_ANIMATED) {
-                this.minecraft.getBlockRenderer().renderSingleBlock(
-                  state, context.pose(), vertexConsumers, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY
-                );
-            }
-            
-            if (entity != null) {
-                var entityRenderer = this.minecraft.getBlockEntityRenderDispatcher().getRenderer(entity);
-                if (entityRenderer != null) {
-                    entityRenderer.render(entity, partialTicks, context.pose(), vertexConsumers, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+
+        var matrices = new PoseStack();
+
+        matrices.translate(x + size / 2f, y + size / 2f, 400);
+        matrices.scale(40 * size / 64f, -40 * size / 64f, 40);
+        matrices.scale(scale, scale, scale);
+
+        matrices.mulPose(Axis.XP.rotationDegrees(30 + previewAngle));
+        matrices.mulPose(Axis.YP.rotationDegrees(45 + 180 + rotation));
+
+        matrices.translate(-.5 + offset.getX(), -.5 + offset.getY(), -.5 + offset.getZ());
+
+        final var vertexConsumers = minecraft.renderBuffers().bufferSource();
+        this.minecraft.getBlockRenderer().renderSingleBlock(
+          state, matrices, vertexConsumers, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY
+        );
+
+        if (entity != null) {
+            var dispatcher = this.minecraft.getBlockEntityRenderDispatcher();
+            var entityRenderer = dispatcher.getRenderer(entity);
+            if (entityRenderer != null) {
+                dispatcher.prepare(this.minecraft.gameRenderer.getMainCamera());
+                var renderState = dispatcher.tryExtractRenderState(entity, partialTicks, null);
+                if (renderState != null) {
+                    var collector = new DroneRenderer.ImmediateSubmitNodeCollector(vertexConsumers);
+                    dispatcher.submit(renderState, matrices, collector, new CameraRenderState());
                 }
             }
-            
-            RenderSystem.setShaderLights(new Vector3f(-1.5f, -.5f, 0), new Vector3f(0, -1, 0));
-            vertexConsumers.endBatch();
-            Lighting.setupFor3DItems();
-        });
-        
-        context.pose().popPose();
+        }
+
+        vertexConsumers.endBatch();
+        this.minecraft.gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
     }
-    
+
+    private static void drawItem(GuiGraphics context, Item item, int x, int y, int size) {
+        var client = Minecraft.getInstance();
+        var entityBuffers = client.renderBuffers().bufferSource();
+        var stack = new ItemStack(item);
+
+        var itemRenderState = new ItemStackRenderState();
+        client.getItemModelResolver().updateForTopItem(itemRenderState, stack, ItemDisplayContext.GUI, client.level, null, 0);
+
+        final boolean notSideLit = !itemRenderState.usesBlockLight();
+        if (notSideLit) {
+            client.gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_FLAT);
+        }
+
+        var matrices = new PoseStack();
+
+        // Translate to the root of the component
+        matrices.translate(x, y, 100);
+
+        // Scale according to component size and translate to the center
+        matrices.scale(size / 16f, size / 16f, 1);
+        matrices.translate(8.0, 8.0, 0.0);
+
+        // Vanilla scaling and y inversion
+        matrices.scale(16, -16, 16);
+
+        var collector = new DroneRenderer.ImmediateSubmitNodeCollector(entityBuffers);
+        itemRenderState.submit(matrices, collector, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, -1);
+        entityBuffers.endBatch();
+
+        if (notSideLit) {
+            client.gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
+        }
+    }
+    */
+
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        
+    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double deltaX, double deltaY) {
+
+        var mouseX = event.x();
+        var mouseY = event.y();
+
         if (Math.abs(deltaY) > 0.001) {
             var centerX = this.width / 2;
             var centerY = this.height / 2;
             var backgroundStartX = centerX - (300 / 2);
             var backgroundStartY = centerY - (183 / 2);
-            
+
             var previewStartX = backgroundStartX + 5;
             var previewEndX = previewStartX + 140;
             var previewStartY = backgroundStartY + 5;
             var previewEndY = previewStartY + 170;
-            
+
             if (mouseX < previewEndX && mouseX > previewStartX && mouseY < previewEndY && mouseY > previewStartY) {
                 previewAngle += deltaY;
             }
-            
+
         }
-        
-        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+
+        return super.mouseDragged(event, deltaX, deltaY);
     }
     
     private float getSpeedProgress() {
@@ -289,64 +319,17 @@ public class DroneCreatorScreen extends Screen {
         return Math.clamp(droneData.getSize() / 10f, 0.1f, 1);
     }
     
-    private static void drawItem(GuiGraphics context, Item item, int x, int y, int size) {
-        var itemRenderer = Minecraft.getInstance().getItemRenderer();
-        var entityBuffers = Minecraft.getInstance().renderBuffers().bufferSource();
-        var stack = new ItemStack(item);
-        
-        final boolean notSideLit = !itemRenderer.getModel(stack, null, null, 0).usesBlockLight();
-        if (notSideLit) {
-            Lighting.setupForFlatItems();
-        }
-        
-        var matrices = context.pose();
-        matrices.pushPose();
-        
-        // Translate to the root of the component
-        matrices.translate(x, y, 100);
-        
-        // Scale according to component size and translate to the center
-        matrices.scale(size / 16f, size / 16f, 1);
-        matrices.translate(8.0, 8.0, 0.0);
-        
-        // Vanilla scaling and y inversion
-        if (notSideLit) {
-            matrices.scale(16, -16, 16);
-        } else {
-            matrices.mulPose(new Matrix4f().scaling(16, -16, 16));
-        }
-        
-        var client = Minecraft.getInstance();
-        
-        itemRenderer.renderStatic(
-          stack,
-          ItemDisplayContext.GUI,
-          LightTexture.FULL_BRIGHT,
-          OverlayTexture.NO_OVERLAY,
-          matrices, entityBuffers,
-          client.level,
-          0);
-        entityBuffers.endBatch();
-        
-        // Clean up
-        matrices.popPose();
-        
-        if (notSideLit) {
-            Lighting.setupFor3DItems();
-        }
-    }
-    
     public void assembleDrone() {
         
         if (!this.droneData.isValid()) {
-            this.minecraft.getToasts().addToast(  // says "assembled, drone has been added to inv"
+            this.minecraft.getToastManager().addToast(  // says "assembled, drone has been added to inv"
               SystemToast.multiline(this.minecraft, SystemToast.SystemToastId.NARRATOR_TOGGLE, Component.translatable("drone.message.invalid_drone"), Component.translatable("drone.message.invalid_drone_desc"))
             );
             
             return;
         }
         
-        this.minecraft.getToasts().addToast(  // says "assembled, drone has been added to inv"
+        this.minecraft.getToastManager().addToast(  // says "assembled, drone has been added to inv"
           SystemToast.multiline(this.minecraft, SystemToast.SystemToastId.NARRATOR_TOGGLE, Component.translatable("drone.message.assembled"), Component.translatable("drone.message.assembled_desc"))
         );
         
@@ -366,15 +349,15 @@ public class DroneCreatorScreen extends Screen {
         }
         
         @Override
-        public void onPress() {
+        public void onPress(net.minecraft.client.input.InputWithModifiers input) {
             isPressed = true;
-            
-            super.onPress();
+
+            super.onPress(input);
         }
         
         @Override
-        public boolean mouseReleased(double mouseX, double mouseY, int button) {
-            var valid = super.mouseReleased(mouseX, mouseY, button);
+        public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+            var valid = super.mouseReleased(event);
             if (valid && isPressed) {
                 isPressed = false;
                 this.parent.assembleDrone();
@@ -406,14 +389,14 @@ public class DroneCreatorScreen extends Screen {
                 usedTexture = BIG_BUTTON_PRESSED_TEXTURE;
             
             
-            context.blit(usedTexture, this.getX(), this.getY(), 0, 0, 0, this.getWidth(), this.getHeight(), this.getWidth(), this.getHeight());
+            context.blit(RenderPipelines.GUI_TEXTURED, usedTexture, this.getX(), this.getY(), 0.0F, 0.0F, this.getWidth(), this.getHeight(), this.getWidth(), this.getHeight());
             
             var scale = 3.4f;
             
             var textX = this.getX() + 11;
             var textY = this.getY() + 13;
             
-            var textColor = 13685204;
+            var textColor = 0xFF000000 | 13685204;
             
             if (this.isHovered())
                 textY += 4;
@@ -422,15 +405,15 @@ public class DroneCreatorScreen extends Screen {
                 textY += 6;
             
             
-            context.pose().pushPose();
-            context.pose().scale(scale, scale, scale);
-            
+            context.pose().pushMatrix();
+            context.pose().scale(scale, scale);
+
             textX /= scale;
             textY /= scale;
-            
+
             context.drawString(Minecraft.getInstance().font, this.getMessage(), textX, textY, textColor, false);
-            
-            context.pose().popPose();
+
+            context.pose().popMatrix();
         }
     }
 }
