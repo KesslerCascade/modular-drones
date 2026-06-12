@@ -6,11 +6,15 @@ import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelGenerators;
 import net.minecraft.client.data.models.MultiVariant;
 import net.minecraft.client.data.models.blockstates.MultiVariantGenerator;
+import net.minecraft.client.data.models.model.ItemModelUtils;
 import net.minecraft.client.data.models.model.ModelTemplates;
 import net.minecraft.client.data.models.model.TextureMapping;
 import net.minecraft.client.data.models.model.TextureSlot;
 import net.minecraft.client.renderer.block.model.Variant;
+import net.minecraft.client.renderer.item.EmptyModel;
+import net.minecraft.client.renderer.item.properties.select.DisplayContext;
 import net.minecraft.util.random.WeightedList;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.block.Block;
 import rearth.init.BlockContent;
 import rearth.init.ItemContent;
@@ -33,7 +37,15 @@ public class ModelGenerator extends FabricModelProvider {
     
     @Override
     public void generateItemModels(ItemModelGenerators itemModelGenerator) {
-        itemModelGenerator.generateFlatItem(ItemContent.POCKET_DRONE.get(), ModelTemplates.FLAT_ITEM);
+        var drone = ItemContent.POCKET_DRONE.get();
+
+        var modelLocation = ModelTemplates.FLAT_ITEM.create(drone, TextureMapping.layer0(drone), itemModelGenerator.modelOutput);
+        var droneModel = ItemModelUtils.plainModel(modelLocation);
+
+        // Items placed in the head slot render their item model on the player's head unless the model
+        // resolves to nothing for that display context, so hide the drone there.
+        itemModelGenerator.itemModelOutput.accept(drone, ItemModelUtils.select(new DisplayContext(), droneModel,
+          ItemModelUtils.when(ItemDisplayContext.HEAD, new EmptyModel.Unbaked())));
     }
     
     public void registerFrame(Block block, BlockModelGenerators blockStateModelGenerator) {

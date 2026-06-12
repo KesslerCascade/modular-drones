@@ -1,4 +1,4 @@
-// 1.21.10	-999999999-01-01T00:00:00	Modular Drones/Block Loot Tables
+// 1.21.11	-999999999-01-01T00:00:00	Modular Drones/Block Loot Tables
 77d86903bb01a864fe06cd0153f8380ab207d842 data/drones/loot_table/blocks/controller.json
 730e777c6c69ce084dfe0dfedb0c47ca031aedfe data/drones/loot_table/blocks/drill.json
 f42aeff73394068925585f9fd97148e268b01f0c data/drones/loot_table/blocks/frame.json

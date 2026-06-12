@@ -1,4 +1,4 @@
-// 1.21.10	-999999999-01-01T00:00:00	Modular Drones/Model Definitions
+// 1.21.11	-999999999-01-01T00:00:00	Modular Drones/Model Definitions
 7845279e50fe4fbd27542dea29330dc9adf07ee1 assets/drones/blockstates/controller.json
 1b9ec356a1379463b92235a30b7465524b6c1779 assets/drones/blockstates/drill.json
 d756b710db8a29d2e878d72def38417f916466f6 assets/drones/blockstates/frame.json
@@ -10,7 +10,7 @@ d5b5b966cbc587108a345f55865f4110a2c8bf4f assets/drones/items/controller.json
 e5b606e5fa9beac067dd05a2ba0d2d543909d7e5 assets/drones/items/frame.json
 e4b2225b61707781d6a2ba72514b66c1ae5995e5 assets/drones/items/ion_thruster.json
 430a5ecc4b38245afd794abaa30c5720199af311 assets/drones/items/iron_rotor.json
-be5ac9c98d32e3b7ed84f19cc303e60712b6ba98 assets/drones/items/pocket_drone.json
+da2caf4b540c5aa1ee864eb421edda277003fd9f assets/drones/items/pocket_drone.json
 e3ae3d14751505f8229ded5306ce5597e9ca530d assets/drones/items/wood_rotor.json
 5fe4e868a4bc50f249a8967ad84976c072a600be assets/drones/models/block/controller.json
 6001046546874735749aea897b2488b6509c0eea assets/drones/models/block/frame.json
