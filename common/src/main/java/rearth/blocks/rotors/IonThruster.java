@@ -13,6 +13,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.Rotation;
 
 public class IonThruster extends Block {
 
@@ -52,6 +53,33 @@ public class IonThruster extends Block {
             default -> {}
         }
         return state;
+    }
+
+    @Override
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        switch (rotation) {
+            case CLOCKWISE_180 -> {
+                return state.setValue(NORTH, state.getValue(SOUTH))
+                         .setValue(EAST, state.getValue(WEST))
+                         .setValue(SOUTH, state.getValue(NORTH))
+                         .setValue(WEST, state.getValue(EAST));
+            }
+            case COUNTERCLOCKWISE_90 -> {
+                return state.setValue(NORTH, state.getValue(EAST))
+                         .setValue(EAST, state.getValue(SOUTH))
+                         .setValue(SOUTH, state.getValue(WEST))
+                         .setValue(WEST, state.getValue(NORTH));
+            }
+            case CLOCKWISE_90 -> {
+                return state.setValue(NORTH, state.getValue(WEST))
+                         .setValue(EAST, state.getValue(NORTH))
+                         .setValue(SOUTH, state.getValue(EAST))
+                         .setValue(WEST, state.getValue(SOUTH));
+            }
+            default -> {
+                return state;
+            }
+        }
     }
 
     private boolean canConnect(LevelAccessor level, BlockPos pos) {
