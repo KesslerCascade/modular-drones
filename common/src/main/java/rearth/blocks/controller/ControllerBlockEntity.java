@@ -146,7 +146,7 @@ public class ControllerBlockEntity extends BlockEntity {
     public boolean loadDroneToWorld(DroneData data, Player player) {
 
         if (getCurrentDroneData() != null) {
-            player.displayClientMessage(Component.translatable("drone.message.platform_occupied"), true);
+            player.sendOverlayMessage(Component.translatable("drone.message.platform_occupied"));
             return false;
         }
 
@@ -162,7 +162,7 @@ public class ControllerBlockEntity extends BlockEntity {
 
         var platformBlocks = getPlatformBlocks();
         if (platformBlocks.isEmpty()) {
-            player.displayClientMessage(Component.translatable("drone.message.platform_too_small"), true);
+            player.sendOverlayMessage(Component.translatable("drone.message.platform_too_small"));
             return false;
         }
 
@@ -190,7 +190,7 @@ public class ControllerBlockEntity extends BlockEntity {
         }
 
         if (chosenCenter == null) {
-            player.displayClientMessage(Component.translatable("drone.message.platform_too_small"), true);
+            player.sendOverlayMessage(Component.translatable("drone.message.platform_too_small"));
             return false;
         }
 
