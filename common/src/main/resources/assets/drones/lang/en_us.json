@@ -26,6 +26,8 @@
   "drone.message.invalid_drone_desc": "Please check your drone configuration.",
   "drone.message.assembled": "Drone Assembled",
   "drone.message.assembled_desc": "The drone has been added to your inventory.",
+  "drone.message.platform_too_small": "Not enough room on the assembly platform to place this drone.",
+  "drone.message.platform_occupied": "The assembly platform is already occupied!",
   "category.drones.main_group": "Modular Drones",
   "block.drones.frame": "Assembly Frame",
   "block.drones.controller": "Drone Assembly Controller",

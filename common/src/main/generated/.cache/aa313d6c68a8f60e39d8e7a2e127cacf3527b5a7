@@ -1,16 +1,16 @@
-// 1.21.1	2025-10-20T19:51:34.812673	Modular Drones/Model Definitions
-fc4461ec847d1936b9a52930fe79e41eb730cb61 assets\drones\models\item\ion_thruster.json
-da320498ce67d71d789f7e0e4b803831b907e5d4 assets\drones\models\item\wood_rotor.json
-f954eea64ccf81837428b97bfc3d2875152e9abf assets\drones\models\item\frame.json
-1b9ec356a1379463b92235a30b7465524b6c1779 assets\drones\blockstates\drill.json
-95c1e95c2840cba639bc74927a06b61f8dd7ef96 assets\drones\models\item\pocket_drone.json
-5af80849883dfff7103ddf1075aeb556e295434a assets\drones\models\item\iron_rotor.json
-b84a9e3a087a1bae1c30bb5e1f133034b68c5473 assets\drones\models\item\controller.json
-3d83dc4843a280d305872ba69ba515cd71d2d8d5 assets\drones\blockstates\wood_rotor.json
-7845279e50fe4fbd27542dea29330dc9adf07ee1 assets\drones\blockstates\controller.json
-166e309283877474b3ed53980561795512c83e7f assets\drones\blockstates\iron_rotor.json
-d756b710db8a29d2e878d72def38417f916466f6 assets\drones\blockstates\frame.json
-6001046546874735749aea897b2488b6509c0eea assets\drones\models\block\frame.json
-4291326d4e0daa6eacf9440ff04082eec94fa8d5 assets\drones\models\item\drill.json
-949a108abff82bdfd46ab8e8d744af2cd09fe7da assets\drones\blockstates\ion_thruster.json
-5fe4e868a4bc50f249a8967ad84976c072a600be assets\drones\models\block\controller.json
+// 1.21.1	2026-06-13T15:20:19.725686529	Modular Drones/Model Definitions
+da320498ce67d71d789f7e0e4b803831b907e5d4 assets/drones/models/item/wood_rotor.json
+4e9743a77035dd173e1d5cb804a094f86a70b2ee assets/drones/blockstates/controller.json
+95c1e95c2840cba639bc74927a06b61f8dd7ef96 assets/drones/models/item/pocket_drone.json
+4291326d4e0daa6eacf9440ff04082eec94fa8d5 assets/drones/models/item/drill.json
+166e309283877474b3ed53980561795512c83e7f assets/drones/blockstates/iron_rotor.json
+949a108abff82bdfd46ab8e8d744af2cd09fe7da assets/drones/blockstates/ion_thruster.json
+b84a9e3a087a1bae1c30bb5e1f133034b68c5473 assets/drones/models/item/controller.json
+d756b710db8a29d2e878d72def38417f916466f6 assets/drones/blockstates/frame.json
+5fe4e868a4bc50f249a8967ad84976c072a600be assets/drones/models/block/controller.json
+6001046546874735749aea897b2488b6509c0eea assets/drones/models/block/frame.json
+5af80849883dfff7103ddf1075aeb556e295434a assets/drones/models/item/iron_rotor.json
+3d83dc4843a280d305872ba69ba515cd71d2d8d5 assets/drones/blockstates/wood_rotor.json
+f954eea64ccf81837428b97bfc3d2875152e9abf assets/drones/models/item/frame.json
+fc4461ec847d1936b9a52930fe79e41eb730cb61 assets/drones/models/item/ion_thruster.json
+9db394f2e846c8d538d0576b04389c5282444599 assets/drones/blockstates/drill.json

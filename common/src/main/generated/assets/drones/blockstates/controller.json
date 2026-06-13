@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=east": {
+      "model": "drones:block/controller",
+      "y": 270
+    },
+    "facing=north": {
+      "model": "drones:block/controller",
+      "y": 180
+    },
+    "facing=south": {
       "model": "drones:block/controller"
+    },
+    "facing=west": {
+      "model": "drones:block/controller",
+      "y": 90
     }
   }
 }

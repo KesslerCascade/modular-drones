@@ -2,11 +2,5 @@
   "parent": "minecraft:item/generated",
   "textures": {
     "layer0": "drones:item/pocket_drone"
-  },
-  "display": {
-    "head": {
-      "translation": [0, -30, 0],
-      "scale": [0.1, 0.1, 0.1]
-    }
   }
 }

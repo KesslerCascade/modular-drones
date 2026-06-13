@@ -1,13 +1,13 @@
-// 1.21.1	2025-10-20T19:51:34.8106717	Modular Drones/Recipes
-f162bc917434305b4d79a234a2b7636d9a748018 data\drones\recipe\crafting\_controller.json
-c9a02a287177b717790d19ac8ea5330cfe80b533 data\drones\advancement\recipes\misc\crafting\_ironrotor.json
-31198f3e5e914a9e6fd3f71d1b78868c80881a08 data\drones\recipe\crafting\_ionrotor.json
-cbf6871e8aac6c3f2470308877804de22df0e22e data\drones\recipe\crafting\_woodrotor.json
-84d18849f24dc1d858731be9dac424646741932e data\drones\recipe\crafting\_ironrotor.json
-30423e391bdf0959f34442221ffdaa22dcb85ce3 data\drones\recipe\crafting\_frame.json
-a88005a262e39c07e331ba43a563a3a2e7dfb2f0 data\drones\advancement\recipes\misc\crafting\_ionrotor.json
-32b0a1c46de1082133657d2fb04a8ec15c5e10f6 data\drones\advancement\recipes\misc\crafting\_frame.json
-69d9fcd3c9763358735b9682546691c3479f2a98 data\drones\advancement\recipes\misc\crafting\_drill.json
-d2e9efd98960292be8afae266f9b2b9f72469479 data\drones\advancement\recipes\misc\crafting\_woodrotor.json
-ce6afb028766afb7fc81d9534ce271b5484b2be0 data\drones\advancement\recipes\misc\crafting\_controller.json
-9965047906649a52ebd48476b01b4408c5c45b84 data\drones\recipe\crafting\_drill.json
+// 1.21.1	2026-06-13T15:20:19.724377037	Modular Drones/Recipes
+84d18849f24dc1d858731be9dac424646741932e data/drones/recipe/crafting/_ironrotor.json
+a88005a262e39c07e331ba43a563a3a2e7dfb2f0 data/drones/advancement/recipes/misc/crafting/_ionrotor.json
+d2e9efd98960292be8afae266f9b2b9f72469479 data/drones/advancement/recipes/misc/crafting/_woodrotor.json
+cbf6871e8aac6c3f2470308877804de22df0e22e data/drones/recipe/crafting/_woodrotor.json
+32b0a1c46de1082133657d2fb04a8ec15c5e10f6 data/drones/advancement/recipes/misc/crafting/_frame.json
+31198f3e5e914a9e6fd3f71d1b78868c80881a08 data/drones/recipe/crafting/_ionrotor.json
+69d9fcd3c9763358735b9682546691c3479f2a98 data/drones/advancement/recipes/misc/crafting/_drill.json
+9965047906649a52ebd48476b01b4408c5c45b84 data/drones/recipe/crafting/_drill.json
+ce6afb028766afb7fc81d9534ce271b5484b2be0 data/drones/advancement/recipes/misc/crafting/_controller.json
+f162bc917434305b4d79a234a2b7636d9a748018 data/drones/recipe/crafting/_controller.json
+c9a02a287177b717790d19ac8ea5330cfe80b533 data/drones/advancement/recipes/misc/crafting/_ironrotor.json
+30423e391bdf0959f34442221ffdaa22dcb85ce3 data/drones/recipe/crafting/_frame.json
