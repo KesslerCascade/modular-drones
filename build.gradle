@@ -17,13 +17,13 @@ tasks.register('release', Copy) {
     group = 'build'
     description = 'Copies the fabric and neoforge release jars into release/'
 
-    dependsOn ':fabric:remapJar', ':neoforge:remapJar'
+    dependsOn ':fabric:shadowJar', ':neoforge:shadowJar'
 
-    from(project(':fabric').tasks.named('remapJar')) {
+    from(project(':fabric').tasks.named('shadowJar')) {
         include '*.jar'
         exclude '*-sources.jar'
     }
-    from(project(':neoforge').tasks.named('remapJar')) {
+    from(project(':neoforge').tasks.named('shadowJar')) {
         include '*.jar'
         exclude '*-sources.jar'
     }
