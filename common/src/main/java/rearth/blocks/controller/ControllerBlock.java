@@ -27,12 +27,12 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class ControllerBlock extends BaseEntityBlock {
 
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public ControllerBlock(Properties settings) {
         super(settings);
@@ -93,7 +93,7 @@ public class ControllerBlock extends BaseEntityBlock {
                     stack.shrink(1);
                     return InteractionResult.CONSUME;
                 }
-                return ItemInteractionResult.FAIL;
+                return InteractionResult.FAIL;
             }
         }
 
