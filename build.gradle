@@ -13,6 +13,24 @@ allprojects {
     version = rootProject.mod_version
 }
 
+tasks.register('release', Copy) {
+    group = 'build'
+    description = 'Copies the fabric and neoforge release jars into release/'
+
+    dependsOn ':fabric:remapJar', ':neoforge:remapJar'
+
+    from(project(':fabric').tasks.named('remapJar')) {
+        include '*.jar'
+        exclude '*-sources.jar'
+    }
+    from(project(':neoforge').tasks.named('remapJar')) {
+        include '*.jar'
+        exclude '*-sources.jar'
+    }
+
+    into layout.projectDirectory.dir('release')
+}
+
 subprojects {
     apply plugin: 'dev.architectury.loom'
     apply plugin: 'architectury-plugin'
