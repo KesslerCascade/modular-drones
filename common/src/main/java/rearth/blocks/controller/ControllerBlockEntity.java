@@ -10,11 +10,14 @@ import rearth.init.BlockEntitiesContent;
 import rearth.init.ComponentContent;
 import rearth.init.ItemContent;
 import rearth.util.FloodFill;
+import rearth.util.RotationUtil;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
@@ -78,12 +81,16 @@ public class ControllerBlockEntity extends BlockEntity {
         var droneBlocks = FloodFill.Run(level, droneStart, (pos, state) -> isValidDroneBlock(level, pos, state), this::isAboveOwnFrame, 1000, true);
         var droneCenter = findCenterOfMass(droneBlocks);
         System.out.println("drone: " + droneBlocks);
-        
+
+        var controllerFacing = getBlockState().getValue(ControllerBlock.FACING);
+        var toCanonical = RotationUtil.rotationFromTo(controllerFacing, Direction.SOUTH);
+
         var blockData = new ArrayList<RecordedBlock>();
         for (var blockPos : droneBlocks) {
             var blockState = level.getBlockState(blockPos);
-            var localPos = blockPos.subtract(droneCenter);
-            var data = new RecordedBlock(blockState, localPos);
+            var localPos = RotationUtil.rotate(blockPos.subtract(droneCenter), toCanonical);
+            var rotatedState = blockState.rotate(toCanonical);
+            var data = new RecordedBlock(rotatedState, localPos);
             blockData.add(data);
         }
         
@@ -136,36 +143,71 @@ public class ControllerBlockEntity extends BlockEntity {
         return Optional.empty();
     }
     
-    public boolean loadDroneToWorld(DroneData data) {
+    public boolean loadDroneToWorld(DroneData data, Player player) {
 
-        if (getCurrentDroneData() != null) return false;
-
-        // see if all blocks could be potentially placed
-        // fails if any blocks are occupied
-        for (var droneBlockData : data.getBlocks()) {
-            var offset = droneBlockData.localPos();
-            var worldPos = this.worldPosition.offset(data.getAssemblerOffset()).offset(offset);
-            if (!isAboveOwnFrame(worldPos)) return false;
-            var worldState = level.getBlockState(worldPos);
-            if (!worldState.isAir()) return false;
+        if (getCurrentDroneData() != null) {
+            player.displayClientMessage(Component.translatable("drone.message.platform_occupied"), true);
+            return false;
         }
-        
-        level.playSound(null, worldPosition, SoundEvents.SHROOMLIGHT_PLACE, SoundSource.BLOCKS, 1f, 1f);
-        
+
+        var controllerFacing = getBlockState().getValue(ControllerBlock.FACING);
+        var fromCanonical = RotationUtil.rotationFromTo(Direction.SOUTH, controllerFacing);
+
+        var rotatedBlocks = new ArrayList<RecordedBlock>();
         for (var droneBlockData : data.getBlocks()) {
-            var offset = droneBlockData.localPos();
-            var worldPos = this.worldPosition.offset(data.getAssemblerOffset()).offset(offset);
-            level.setBlockAndUpdate(worldPos, droneBlockData.state());
-            
-            
+            var rotatedLocalPos = RotationUtil.rotate(droneBlockData.localPos(), fromCanonical);
+            var rotatedState = droneBlockData.state().rotate(fromCanonical);
+            rotatedBlocks.add(new RecordedBlock(rotatedState, rotatedLocalPos));
+        }
+
+        var platformBlocks = getPlatformBlocks();
+        if (platformBlocks.isEmpty()) {
+            player.displayClientMessage(Component.translatable("drone.message.platform_too_small"), true);
+            return false;
+        }
+
+        var candidates = new ArrayList<BlockPos>();
+        for (var frameBlock : platformBlocks) {
+            var above = frameBlock.above();
+            if (isAboveOwnFrame(above)) candidates.add(above);
+        }
+        candidates.sort(Comparator.comparingDouble(pos -> pos.distSqr(worldPosition)));
+
+        BlockPos chosenCenter = null;
+        for (var candidateCenter : candidates) {
+            var fits = true;
+            for (var rotatedBlock : rotatedBlocks) {
+                var worldPos = candidateCenter.offset(rotatedBlock.localPos());
+                if (!isAboveOwnFrame(worldPos) || !level.getBlockState(worldPos).isAir()) {
+                    fits = false;
+                    break;
+                }
+            }
+            if (fits) {
+                chosenCenter = candidateCenter;
+                break;
+            }
+        }
+
+        if (chosenCenter == null) {
+            player.displayClientMessage(Component.translatable("drone.message.platform_too_small"), true);
+            return false;
+        }
+
+        level.playSound(null, worldPosition, SoundEvents.SHROOMLIGHT_PLACE, SoundSource.BLOCKS, 1f, 1f);
+
+        for (var rotatedBlock : rotatedBlocks) {
+            var worldPos = chosenCenter.offset(rotatedBlock.localPos());
+            level.setBlockAndUpdate(worldPos, rotatedBlock.state());
+
             if (level instanceof ServerLevel serverWorld) {
                 var spawnAt = worldPos.getCenter();
                 serverWorld.sendParticles(ParticleTypes.GUST, spawnAt.x, spawnAt.y, spawnAt.z, 1, 0, 0.1f, 0, 0.5f);
             }
         }
-        
+
         return true;
-        
+
     }
     
     private static boolean isValidDroneBlock(Level level, BlockPos pos, BlockState state) {
@@ -192,8 +234,11 @@ public class ControllerBlockEntity extends BlockEntity {
         level.addFreshEntity(itemEntity);
         
         // remove blocks
+        var controllerFacing = getBlockState().getValue(ControllerBlock.FACING);
+        var fromCanonical = RotationUtil.rotationFromTo(Direction.SOUTH, controllerFacing);
         for (var droneBlock : droneData.getBlocks()) {
-            var worldPos = this.worldPosition.offset(droneData.getAssemblerOffset()).offset(droneBlock.localPos());
+            var rotatedLocalPos = RotationUtil.rotate(droneBlock.localPos(), fromCanonical);
+            var worldPos = this.worldPosition.offset(droneData.getAssemblerOffset()).offset(rotatedLocalPos);
             level.setBlockAndUpdate(worldPos, Blocks.AIR.defaultBlockState());
             
             if (level instanceof ServerLevel serverWorld) {

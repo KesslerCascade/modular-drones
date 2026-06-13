@@ -1,22 +1,28 @@
 package rearth.fabric.datagen;
 
+import com.mojang.math.Quadrant;
 import net.fabricmc.fabric.api.client.datagen.v1.provider.FabricModelProvider;
 import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelGenerators;
 import net.minecraft.client.data.models.MultiVariant;
 import net.minecraft.client.data.models.blockstates.MultiVariantGenerator;
+import net.minecraft.client.data.models.blockstates.PropertyDispatch;
 import net.minecraft.client.data.models.model.ItemModelUtils;
+import net.minecraft.client.data.models.model.ModelLocationUtils;
 import net.minecraft.client.data.models.model.ModelTemplates;
 import net.minecraft.client.data.models.model.TextureMapping;
 import net.minecraft.client.data.models.model.TextureSlot;
 import net.minecraft.client.data.models.model.ModelLocationUtils;
 import net.minecraft.client.renderer.block.dispatch.Variant;
+import net.minecraft.client.renderer.block.model.VariantMutator;
 import net.minecraft.client.renderer.item.EmptyModel;
 import net.minecraft.client.renderer.item.properties.select.DisplayContext;
+import net.minecraft.core.Direction;
 import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import rearth.init.BlockContent;
 import rearth.init.ItemContent;
 
@@ -32,10 +38,48 @@ public class ModelGenerator extends FabricModelProvider {
         registerNonTemplateModelBlock(BlockContent.IRON_ROTOR.get(), blockStateModelGenerator);
         registerNonTemplateModelBlock(BlockContent.ION_THRUSTER.get(), blockStateModelGenerator);
         registerNonTemplateModelBlock(BlockContent.DRILL.get(), blockStateModelGenerator);
-        registerCube(BlockContent.ASSEMBLER_CONTROLLER.get(), blockStateModelGenerator);
+        registerHorizontalFacing(BlockContent.DRILL.get(), blockStateModelGenerator);
+        registerController(BlockContent.ASSEMBLER_CONTROLLER.get(), blockStateModelGenerator);
         registerFrame(BlockContent.ASSEMBLER_FRAME.get(), blockStateModelGenerator);
     }
-    
+
+    public void registerController(Block block, BlockModelGenerators blockStateModelGenerator) {
+        var textureMap = (new TextureMapping())
+                           .put(TextureSlot.PARTICLE, TextureMapping.getBlockTexture(block, "_particle"))
+                           .put(TextureSlot.DOWN, TextureMapping.getBlockTexture(block, "_down"))
+                           .put(TextureSlot.UP, TextureMapping.getBlockTexture(block, "_up"))
+                           .put(TextureSlot.NORTH, TextureMapping.getBlockTexture(block, "_north"))
+                           .put(TextureSlot.SOUTH, TextureMapping.getBlockTexture(block, "_south"))
+                           .put(TextureSlot.EAST, TextureMapping.getBlockTexture(block, "_east"))
+                           .put(TextureSlot.WEST, TextureMapping.getBlockTexture(block, "_west"));
+
+        var model = ModelTemplates.CUBE.create(block, textureMap, blockStateModelGenerator.modelOutput);
+        var multiVariant = new MultiVariant(WeightedList.of(new Variant(model)));
+
+        blockStateModelGenerator.blockStateOutput.accept(
+          MultiVariantGenerator.dispatch(block, multiVariant)
+            .with(PropertyDispatch.modify(BlockStateProperties.HORIZONTAL_FACING)
+                    .select(Direction.SOUTH, (VariantMutator) variant -> variant)
+                    .select(Direction.WEST, VariantMutator.Y_ROT.withValue(Quadrant.R90))
+                    .select(Direction.NORTH, VariantMutator.Y_ROT.withValue(Quadrant.R180))
+                    .select(Direction.EAST, VariantMutator.Y_ROT.withValue(Quadrant.R270)))
+        );
+    }
+
+    public void registerHorizontalFacing(Block block, BlockModelGenerators blockStateModelGenerator) {
+        var model = ModelLocationUtils.getModelLocation(block);
+        var multiVariant = new MultiVariant(WeightedList.of(new Variant(model)));
+
+        blockStateModelGenerator.blockStateOutput.accept(
+          MultiVariantGenerator.dispatch(block, multiVariant)
+            .with(PropertyDispatch.modify(BlockStateProperties.HORIZONTAL_FACING)
+                    .select(Direction.SOUTH, (VariantMutator) variant -> variant)
+                    .select(Direction.WEST, VariantMutator.Y_ROT.withValue(Quadrant.R90))
+                    .select(Direction.NORTH, VariantMutator.Y_ROT.withValue(Quadrant.R180))
+                    .select(Direction.EAST, VariantMutator.Y_ROT.withValue(Quadrant.R270)))
+        );
+    }
+
     @Override
     public void generateItemModels(ItemModelGenerators itemModelGenerator) {
         var drone = ItemContent.POCKET_DRONE.get();
@@ -56,13 +100,6 @@ public class ModelGenerator extends FabricModelProvider {
           MultiVariantGenerator.dispatch(block, multiVariant));
     }
 
-    public void registerCube(Block block, BlockModelGenerators blockStateModelGenerator) {
-        var modelLocation = ModelTemplates.CUBE_ALL.create(block, TextureMapping.cube(block), blockStateModelGenerator.modelOutput);
-        var multiVariant = new MultiVariant(WeightedList.of(new Variant(modelLocation)));
-        blockStateModelGenerator.blockStateOutput.accept(
-          MultiVariantGenerator.dispatch(block, multiVariant));
-    }
-
     public void registerFrame(Block block, BlockModelGenerators blockStateModelGenerator) {
         var textureMap = (new TextureMapping())
                            .put(TextureSlot.PARTICLE, TextureMapping.getBlockTexture(block, "_side"))
@@ -72,7 +109,7 @@ public class ModelGenerator extends FabricModelProvider {
                            .put(TextureSlot.SOUTH, TextureMapping.getBlockTexture(block, "_side"))
                            .put(TextureSlot.EAST, TextureMapping.getBlockTexture(block, "_side"))
                            .put(TextureSlot.WEST, TextureMapping.getBlockTexture(block, "_side"));
-        
+
         var modelLocation = ModelTemplates.CUBE.create(block, textureMap, blockStateModelGenerator.modelOutput);
         var multiVariant = new MultiVariant(WeightedList.of(new Variant(modelLocation)));
         blockStateModelGenerator.blockStateOutput.accept(
