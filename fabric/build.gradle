@@ -70,6 +70,7 @@ dependencies {
 
     modImplementation("dev.emi:trinkets:${rootProject.trinkets_version}")
 
+    modImplementation("maven.modrinth:rdpmouse:1.0.0-fabric,${rootProject.minecraft_version}")
 }
 
 processResources {
