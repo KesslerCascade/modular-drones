@@ -1,7 +1,45 @@
 {
-  "variants": {
-    "": {
-      "model": "drones:block/ion_thruster"
+  "multipart": [
+    {
+      "apply": {
+        "model": "drones:block/ion_thruster"
+      }
+    },
+    {
+      "apply": {
+        "model": "drones:block/ion_thruster_arm",
+        "y": 0
+      },
+      "when": {
+        "north": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "drones:block/ion_thruster_arm",
+        "y": 180
+      },
+      "when": {
+        "south": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "drones:block/ion_thruster_arm",
+        "y": 90
+      },
+      "when": {
+        "east": "true"
+      }
+    },
+    {
+      "apply": {
+        "model": "drones:block/ion_thruster_arm",
+        "y": 270
+      },
+      "when": {
+        "west": "true"
+      }
     }
-  }
+  ]
 }

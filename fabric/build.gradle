@@ -76,6 +76,7 @@ dependencies {
     modImplementation("maven.modrinth:trinkets-updated:${rootProject.trinkets_version}")
     modImplementation "org.ladysnake.cardinal-components-api:cardinal-components-base:7.2.0"
     modImplementation "org.ladysnake.cardinal-components-api:cardinal-components-entity:7.2.0"
+    modImplementation("maven.modrinth:rdpmouse:1.0.0-fabric,${rootProject.minecraft_version}")
 }
 
 processResources {
