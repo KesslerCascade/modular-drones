@@ -44,6 +44,8 @@ public class DroneRenderer {
     private static final HashMap<Player, Vec3> lastRotations = new HashMap<>();
 
     private static final RenderType ION_GLOW_RENDER_TYPE = RenderType.eyes(Drones.id("textures/block/ion_glow.png"));
+    private static final float ION_GLOW_PULSE_SPEED = 2.0f;
+    private static final float ION_GLOW_PULSE_DEPTH = 0.3f;
     private static final float ION_TRAIL_SPAWN_CHANCE = 1f / 8f;
     private static final float ION_TRAIL_IDLE_CHANCE_SCALE = 0.05f;
     private static final double ION_TRAIL_VELOCITY_THRESHOLD = 0.05;
@@ -180,8 +182,9 @@ public class DroneRenderer {
             // render additive glow billboards for ion thruster blocks
             if (!ionGlowPositions.isEmpty()) {
                 var glowBuffer = vertexConsumers.getBuffer(ION_GLOW_RENDER_TYPE);
-                for (var glowCenter : ionGlowPositions) {
-                    renderGlowQuad(glowBuffer, glowCenter, targetScale, camera);
+                var time = System.currentTimeMillis() / 1000.0;
+                for (var i = 0; i < ionGlowPositions.size(); i++) {
+                    renderGlowQuad(glowBuffer, ionGlowPositions.get(i), targetScale, camera, time, i);
                 }
             }
 
@@ -198,7 +201,7 @@ public class DroneRenderer {
         
     }
     
-    private static void renderGlowQuad(VertexConsumer buffer, Vector3f center, float size, Camera camera) {
+    private static void renderGlowQuad(VertexConsumer buffer, Vector3f center, float size, Camera camera, double time, int thrusterIndex) {
         var rotation = camera.rotation();
         var half = size * 0.4f;
 
@@ -209,10 +212,20 @@ public class DroneRenderer {
 
         var light = LightTexture.FULL_BRIGHT;
 
-        buffer.addVertex(v1.x, v1.y, v1.z).setColor(255, 255, 255, 255).setUv(1, 1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0, 1, 0);
-        buffer.addVertex(v2.x, v2.y, v2.z).setColor(255, 255, 255, 255).setUv(1, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0, 1, 0);
-        buffer.addVertex(v3.x, v3.y, v3.z).setColor(255, 255, 255, 255).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0, 1, 0);
-        buffer.addVertex(v4.x, v4.y, v4.z).setColor(255, 255, 255, 255).setUv(0, 1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0, 1, 0);
+        // offset each thruster's pulse phase so they don't all pulsate in sync
+        var phase = thrusterIndex * 1.7;
+        var t = time * ION_GLOW_PULSE_SPEED + phase;
+        // layer a few sine waves at different speeds/phases plus a fast jittery component for a noisy flicker
+        var wave = 0.55f * (float) Math.sin(t)
+          + 0.25f * (float) Math.sin(t * 2.7 + 1.3)
+          + 0.2f * (float) Math.sin(t * 9.1 + thrusterIndex * 5.2);
+        var pulse = 1f - ION_GLOW_PULSE_DEPTH * Math.clamp(0.5f + 0.5f * wave, 0f, 1f);
+        var brightness = (int) (255 * pulse);
+
+        buffer.addVertex(v1.x, v1.y, v1.z).setColor(brightness, brightness, brightness, 255).setUv(1, 1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0, 1, 0);
+        buffer.addVertex(v2.x, v2.y, v2.z).setColor(brightness, brightness, brightness, 255).setUv(1, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0, 1, 0);
+        buffer.addVertex(v3.x, v3.y, v3.z).setColor(brightness, brightness, brightness, 255).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0, 1, 0);
+        buffer.addVertex(v4.x, v4.y, v4.z).setColor(brightness, brightness, brightness, 255).setUv(0, 1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0, 1, 0);
     }
 
     private static void spawnIonTrailParticle(ClientLevel world, DroneData droneData, DroneMoveSyncPacket movementData, Vec3 deltaDroneRot, Vec3 velocity, float targetScale, float frameTimeTicks, float chanceScale) {
