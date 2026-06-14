@@ -6,6 +6,7 @@ import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
 import rearth.Drones;
 import rearth.drone.behaviour.*;
+import rearth.init.BlockContent;
 import rearth.init.TagContent;
 import rearth.util.Helpers;
 
@@ -66,7 +67,7 @@ public class DroneData {
             if (!state.is(TagContent.THRUSTER_BLOCKS) && !state.isAir() && state.blocksMotion())
                 weight += 2;
 
-            if (state.is(TagContent.THRUSTER_BLOCKS))
+            if (state.is(BlockContent.ION_THRUSTER.get()))
                 ionThrusters.add(recordedBlock.localPos());
             
             thrust += getThrust(recordedBlock, droneFrame);
