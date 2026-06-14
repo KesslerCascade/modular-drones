@@ -10,22 +10,6 @@ import rearth.Drones;
 
 public class IonTrailParticle extends SingleQuadParticle {
 
-    private static final ParticleRenderType ION_TRAIL_RENDER_TYPE = new ParticleRenderType() {
-        @Override
-        public com.mojang.blaze3d.vertex.BufferBuilder begin(com.mojang.blaze3d.vertex.Tesselator tesselator, net.minecraft.client.renderer.texture.TextureManager textureManager) {
-            RenderSystem.depthMask(true);
-            RenderSystem.enableBlend();
-            RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
-            RenderSystem.setShaderTexture(0, Drones.id("textures/particle/ion_trail.png"));
-            return tesselator.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.PARTICLE);
-        }
-
-        @Override
-        public String toString() {
-            return "ion_trail";
-        }
-    };
-
     protected IonTrailParticle(ClientLevel level, double x, double y, double z, double xd, double yd, double zd) {
         super(level, x, y, z);
         this.xd = xd;
@@ -43,6 +27,11 @@ public class IonTrailParticle extends SingleQuadParticle {
     @Override
     public void render(VertexConsumer buffer, Camera camera, float partialTicks) {
         this.alpha = 0.8f * Math.max(0f, 1f - ((float) this.age + partialTicks) / (float) this.lifetime);
+
+        RenderSystem.enableBlend();
+        RenderSystem.blendFunc(com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA, com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
+        RenderSystem.setShaderTexture(0, Drones.id("textures/particle/ion_trail.png"));
+
         super.render(buffer, camera, partialTicks);
     }
 
@@ -53,7 +42,7 @@ public class IonTrailParticle extends SingleQuadParticle {
 
     @Override
     public ParticleRenderType getRenderType() {
-        return ION_TRAIL_RENDER_TYPE;
+        return ParticleRenderType.CUSTOM;
     }
 
     @Override
