@@ -195,7 +195,7 @@ public class DroneRenderer {
             var isMoving = velocity.lengthSqr() > velocityThreshold * velocityThreshold;
             if (!droneData.getIonThrusterPositions().isEmpty()) {
                 var chanceScale = isMoving ? 1f : ION_TRAIL_IDLE_CHANCE_SCALE;
-                spawnIonTrailParticle(world, droneData, movementData, deltaDroneRot, velocity, targetScale, frameTimeTicks, chanceScale);
+                spawnIonTrailParticle(world, droneData, movementData, deltaDroneRot, velocity, targetScale, frameTimeTicks, chanceScale, isMoving);
             }
         }
         
@@ -228,7 +228,7 @@ public class DroneRenderer {
         buffer.addVertex(v4.x, v4.y, v4.z).setColor(brightness, brightness, brightness, 255).setUv(0, 1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0, 1, 0);
     }
 
-    private static void spawnIonTrailParticle(ClientLevel world, DroneData droneData, DroneMoveSyncPacket movementData, Vec3 deltaDroneRot, Vec3 velocity, float targetScale, float frameTimeTicks, float chanceScale) {
+    private static void spawnIonTrailParticle(ClientLevel world, DroneData droneData, DroneMoveSyncPacket movementData, Vec3 deltaDroneRot, Vec3 velocity, float targetScale, float frameTimeTicks, float chanceScale, boolean isMoving) {
         var random = world.getRandom();
         if (random.nextFloat() > ION_TRAIL_SPAWN_CHANCE * frameTimeTicks * chanceScale) return;
 
@@ -246,11 +246,20 @@ public class DroneRenderer {
 
         var spawnPos = movementData.position().add(rotatedOffset.x, rotatedOffset.y, rotatedOffset.z);
 
-        var velocityDir = velocity.lengthSqr() > 1e-8 ? velocity.normalize() : Vec3.ZERO;
-        var driftSpeed = 0.03;
-        var vx = -velocityDir.x * driftSpeed + (random.nextDouble() - 0.5) * 0.02;
-        var vy = -velocityDir.y * driftSpeed + (random.nextDouble() - 0.5) * 0.02;
-        var vz = -velocityDir.z * driftSpeed + (random.nextDouble() - 0.5) * 0.02;
+        double vx, vy, vz;
+        if (isMoving) {
+            var velocityDir = velocity.lengthSqr() > 1e-8 ? velocity.normalize() : Vec3.ZERO;
+            var driftSpeed = 0.03;
+            vx = -velocityDir.x * driftSpeed + (random.nextDouble() - 0.5) * 0.02;
+            vy = -velocityDir.y * driftSpeed + (random.nextDouble() - 0.5) * 0.02;
+            vz = -velocityDir.z * driftSpeed + (random.nextDouble() - 0.5) * 0.02;
+        } else {
+            // drone is hovering in place - exhaust drifts mostly downward, like thrust supporting its weight
+            var driftSpeed = 0.03;
+            vx = (random.nextDouble() - 0.5) * 0.02;
+            vy = -driftSpeed + (random.nextDouble() - 0.5) * 0.01;
+            vz = (random.nextDouble() - 0.5) * 0.02;
+        }
 
         world.addParticle(ParticleContent.ION_TRAIL.get(), spawnPos.x, spawnPos.y, spawnPos.z, vx, vy, vz);
     }
