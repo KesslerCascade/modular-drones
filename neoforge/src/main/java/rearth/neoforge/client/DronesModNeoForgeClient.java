@@ -9,10 +9,13 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import rearth.Drones;
 import rearth.DronesClient;
+import rearth.client.particles.IonTrailParticleProvider;
 import rearth.client.renderers.DroneRenderer;
+import rearth.init.ParticleContent;
 
 @Mod(value = Drones.MOD_ID, dist = Dist.CLIENT)
 public class DronesModNeoForgeClient {
@@ -43,6 +46,11 @@ public class DronesModNeoForgeClient {
             for (var entry : DronesClient.RENDER_LAYERS.entrySet()) {
                 ItemBlockRenderTypes.setRenderLayer(entry.getKey().get(), entry.getValue());
             }
+        }
+
+        @SubscribeEvent
+        public void registerParticles(RegisterParticleProvidersEvent event) {
+            event.registerSpecial(ParticleContent.ION_TRAIL.get(), new IonTrailParticleProvider());
         }
     }
 }
