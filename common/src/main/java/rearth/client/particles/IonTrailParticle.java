@@ -1,6 +1,7 @@
 package rearth.client.particles;
 
 import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -8,8 +9,8 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.particle.SpriteSet;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.util.LightCoordsUtil;
 
 public class IonTrailParticle extends SingleQuadParticle {
 
@@ -24,7 +25,7 @@ public class IonTrailParticle extends SingleQuadParticle {
       .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
       .withUniform("Projection", UniformType.UNIFORM_BUFFER)
       .withUniform("Fog", UniformType.UNIFORM_BUFFER)
-      .withBlend(BlendFunction.LIGHTNING)
+      .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
       .withVertexFormat(DefaultVertexFormat.PARTICLE, VertexFormat.Mode.QUADS)
       .build();
 
@@ -54,8 +55,8 @@ public class IonTrailParticle extends SingleQuadParticle {
     }
 
     @Override
-    protected int getLightColor(float partialTick) {
-        return LightTexture.FULL_BRIGHT;
+    protected int getLightCoords(float partialTick) {
+        return LightCoordsUtil.FULL_BRIGHT;
     }
 
     @Override

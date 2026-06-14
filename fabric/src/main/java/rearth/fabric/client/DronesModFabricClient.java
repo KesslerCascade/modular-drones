@@ -3,7 +3,7 @@ package rearth.fabric.client;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
-import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
+import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -17,7 +17,7 @@ public final class DronesModFabricClient implements ClientModInitializer {
     public void onInitializeClient() {
         DronesClient.init();
         LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(DronesModFabricClient::renderWorld);
-        ParticleFactoryRegistry.getInstance().register(ParticleContent.ION_TRAIL.get(), IonTrailParticleProvider::new);
+        ParticleProviderRegistry.getInstance().register(ParticleContent.ION_TRAIL.get(), IonTrailParticleProvider::new);
     }
 
     private static void renderWorld(LevelRenderContext context) {

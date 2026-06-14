@@ -24,8 +24,10 @@ import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
+import com.mojang.blaze3d.platform.CompareOp;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
 import net.minecraft.client.renderer.Sheets;
@@ -53,6 +55,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
 import com.mojang.blaze3d.vertex.QuadInstance;
 import net.minecraft.world.entity.player.Player;
@@ -85,9 +88,9 @@ public class DroneRenderer {
       .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
       .withUniform("Projection", UniformType.UNIFORM_BUFFER)
       .withUniform("Fog", UniformType.UNIFORM_BUFFER)
-      .withBlend(BlendFunction.LIGHTNING)
-      .withDepthWrite(false)
-      .withVertexFormat(DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS)
+      .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
+      .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
+      .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
       .build();
 
     private static final RenderType ION_GLOW_RENDER_TYPE = RenderType.create(
@@ -386,7 +389,7 @@ public class DroneRenderer {
         var v3 = new Vector3f(-half, half, 0).rotate(rotation).add(center);
         var v4 = new Vector3f(-half, -half, 0).rotate(rotation).add(center);
 
-        var light = LightTexture.FULL_BRIGHT;
+        var light = LightCoordsUtil.FULL_BRIGHT;
 
         // offset each thruster's pulse phase so they don't all pulsate in sync
         var phase = thrusterIndex * 1.7;

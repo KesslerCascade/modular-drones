@@ -20,16 +20,8 @@ public final class DronesClient {
         Drones.LOGGER.info("Hello from drones client");
 
         NetworkAggregator.registerReceiver(NetworkManager.Side.S2C, NetworkContent.OpenDroneScreenPacket.PAYLOAD_ID, NetworkContent.OpenDroneScreenPacket.PACKET_CODEC, List.of(), DronesClient::onAssembleScreenPacket);
-        
-        RENDER_LAYERS.put(BlockContent.WOOD_ROTOR, ChunkSectionLayer.CUTOUT);
-        RENDER_LAYERS.put(BlockContent.IRON_ROTOR, ChunkSectionLayer.CUTOUT);
-        RENDER_LAYERS.put(BlockContent.ION_THRUSTER, ChunkSectionLayer.CUTOUT);
-
-        for (var entry : RENDER_LAYERS.entrySet()) {
-            RenderTypeRegistry.register(entry.getValue(), entry.getKey().get());
-        }
     }
-    
+
     public static void onAssembleScreenPacket(NetworkContent.OpenDroneScreenPacket packet, NetworkManager.PacketContext context) {
         var player = context.getPlayer();
         var world = player.level();
