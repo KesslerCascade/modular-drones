@@ -61,11 +61,10 @@ public class DroneRenderer {
             var newPos = movementData.position();
             var newRot = movementData.rotation();
             
-            // adjust for switch from angle -180 to 180 on Y rotation axis
+            // adjust for switch from angle -180 to 180 on Y rotation axis: take the shorter way around
             var rotDistY = Math.abs(lastRot.y - newRot.y);
-            var altRotDistY = Math.abs(-lastRot.y - newRot.y);
-            if (altRotDistY < rotDistY && Math.abs(lastRot.y) > 90) {
-                var positive = lastRot.y > 0;
+            if (rotDistY > 180) {
+                var positive = lastRot.y > newRot.y;
                 var adjustedY = positive ? lastRot.y - 360 : lastRot.y + 360;
                 lastRot = new Vec3(lastRot.x, adjustedY, lastRot.z);
             }
