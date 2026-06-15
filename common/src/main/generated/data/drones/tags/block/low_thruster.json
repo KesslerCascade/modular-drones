@@ -1,9 +1,5 @@
 {
   "values": [
-    {
-      "id": "#minecraft:wooden_trapdoors",
-      "required": false
-    },
     "drones:wood_rotor"
   ]
 }
