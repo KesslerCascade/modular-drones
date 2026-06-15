@@ -123,14 +123,14 @@ public class ControllerBlockEntity extends BlockEntity {
         var dataX = 0d;
         var dataY = 0d;
         var dataZ = 0d;
-        
+
         for (var pos : positions) {
             var center = pos.getCenter();
             dataX += center.x;
             dataY += center.y;
             dataZ += center.z;
         }
-        
+
         var realCOM = new Vec3(dataX / positions.size(), dataY / positions.size(), dataZ / positions.size());
         return BlockPos.containing(realCOM);
     }
@@ -166,6 +166,14 @@ public class ControllerBlockEntity extends BlockEntity {
             return false;
         }
 
+        // the recorded local positions are relative to the drone's center of mass, which can have a negative
+        // Y component for tall drones. Shift the placement origin up so the lowest block still lands on the platform.
+        var minLocalY = 0;
+        for (var rotatedBlock : rotatedBlocks) {
+            minLocalY = Math.min(minLocalY, rotatedBlock.localPos().getY());
+        }
+        var placementUpShift = -minLocalY;
+
         var candidates = new ArrayList<BlockPos>();
         for (var frameBlock : platformBlocks) {
             var above = frameBlock.above();
@@ -174,7 +182,8 @@ public class ControllerBlockEntity extends BlockEntity {
         candidates.sort(Comparator.comparingDouble(pos -> pos.distSqr(worldPosition)));
 
         BlockPos chosenCenter = null;
-        for (var candidateCenter : candidates) {
+        for (var candidate : candidates) {
+            var candidateCenter = candidate.above(placementUpShift);
             var fits = true;
             for (var rotatedBlock : rotatedBlocks) {
                 var worldPos = candidateCenter.offset(rotatedBlock.localPos());
