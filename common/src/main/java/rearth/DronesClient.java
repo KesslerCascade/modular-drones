@@ -42,7 +42,7 @@ public final class DronesClient {
         var pos = packet.controllerPos();
         var candidate = world.getBlockEntity(pos, BlockEntitiesContent.ASSEMBLER_CONTROLLER.get());
         candidate.ifPresent(controllerBlockEntity ->
-                              Minecraft.getInstance().setScreen(new DroneCreatorScreen(candidate.get().getCurrentDroneData(), pos))
+                              Minecraft.getInstance().setScreen(new DroneCreatorScreen(candidate.get().getCurrentDroneData(), pos, packet.lastDroneName()))
         );
     }
 }

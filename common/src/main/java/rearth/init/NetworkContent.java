@@ -69,13 +69,15 @@ public class NetworkContent {
         
     }
     
-    public record OpenDroneScreenPacket(BlockPos controllerPos) implements CustomPacketPayload {
-        
+    public record OpenDroneScreenPacket(BlockPos controllerPos, String lastDroneName) implements CustomPacketPayload {
+
         public static final CustomPacketPayload.Type<OpenDroneScreenPacket> PAYLOAD_ID = new CustomPacketPayload.Type<>(Drones.id("open_screen"));
-        
+
         public static final StreamCodec<ByteBuf, OpenDroneScreenPacket> PACKET_CODEC = StreamCodec.composite(
           BlockPos.STREAM_CODEC,
           OpenDroneScreenPacket::controllerPos,
+          ByteBufCodecs.STRING_UTF8,
+          OpenDroneScreenPacket::lastDroneName,
           OpenDroneScreenPacket::new
         );
         

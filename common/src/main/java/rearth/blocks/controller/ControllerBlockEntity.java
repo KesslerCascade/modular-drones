@@ -1,6 +1,8 @@
 package rearth.blocks.controller;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
 import org.jetbrains.annotations.Nullable;
 import rearth.Drones;
 import rearth.drone.DroneData;
@@ -44,8 +46,26 @@ public class ControllerBlockEntity extends BlockEntity {
     public static final float HIGH_THRUSTER_POWER = 40f;
     public static final float ULTRA_THRUSTER_POWER = 60f;
     
+    private String lastDroneName = "";
+
     public ControllerBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntitiesContent.ASSEMBLER_CONTROLLER.get(), pos, state);
+    }
+
+    public String getLastDroneName() {
+        return lastDroneName;
+    }
+
+    @Override
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        tag.putString("last_drone_name", lastDroneName);
+    }
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        lastDroneName = tag.getString("last_drone_name");
     }
     
     public List<BlockPos> getPlatformBlocks() {
@@ -143,7 +163,7 @@ public class ControllerBlockEntity extends BlockEntity {
         return Optional.empty();
     }
     
-    public boolean loadDroneToWorld(DroneData data, Player player) {
+    public boolean loadDroneToWorld(DroneData data, Player player, String droneName) {
 
         if (getCurrentDroneData() != null) {
             player.displayClientMessage(Component.translatable("drone.message.platform_occupied"), true);
@@ -203,6 +223,9 @@ public class ControllerBlockEntity extends BlockEntity {
             return false;
         }
 
+        lastDroneName = droneName;
+        setChanged();
+
         level.playSound(null, worldPosition, SoundEvents.SHROOMLIGHT_PLACE, SoundSource.BLOCKS, 1f, 1f);
 
         for (var rotatedBlock : rotatedBlocks) {
@@ -238,6 +261,9 @@ public class ControllerBlockEntity extends BlockEntity {
         var createdStack = new ItemStack(ItemContent.POCKET_DRONE);
         createdStack.set(DataComponents.CUSTOM_NAME, Component.literal(name));
         createdStack.set(ComponentContent.DRONE_DATA_TYPE.get(), droneData);
+
+        lastDroneName = name;
+        setChanged();
         
         var itemEntity = new ItemEntity(level, player.getX(), player.getY(), player.getZ(), createdStack);
         level.addFreshEntity(itemEntity);
