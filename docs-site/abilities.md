@@ -16,15 +16,15 @@ ability-enabling blocks -->
 
 ## Flight (Rotors)
 
-**Blocks:** Wooden Rotor, Iron Rotor, or Ion Thruster
+**Blocks:** Wooden Rotor, Advanced Rotor, or Ion Thruster
 
 **Placement:** Each rotor needs two empty blocks directly beneath it to provide thrust. Rotors can otherwise be placed
 anywhere on the drone.
 
 Every drone needs at least one rotor to fly. The three tiers provide increasing amounts of thrust — Wooden Rotors are
-the weakest and cheapest, Iron Rotors are a solid mid-tier upgrade, and Ion Thrusters provide the most power. Bigger/heavier drones need more or stronger rotors to stay nimble.
+the weakest and cheapest, Advanced Rotors are a solid mid-tier upgrade, and Ion Thrusters provide the most power. Bigger/heavier drones need more or stronger rotors to stay nimble.
 
-<!-- IMAGE: screenshot comparing Wooden Rotor, Iron Rotor, and Ion Thruster blocks side by side -->
+<!-- IMAGE: screenshot comparing Wooden Rotor, Advanced Rotor, and Ion Thruster blocks side by side -->
 
 ## Arrow Launcher
 

@@ -26,7 +26,7 @@ orientation and any connected arrangement — the controller will detect the who
 ## 3. Build your drone
 
 On top of the frame blocks, build the shape of your drone out of whatever blocks you like. A drone can be made of up
-to 1000 blocks, of any type. At minimum you'll want one of the rotor blocks (Wooden Rotor, Iron Rotor, or Ion Thruster)
+to 1000 blocks, of any type. At minimum you'll want one of the rotor blocks (Wooden Rotor, Advanced Rotor, or Ion Thruster)
 so your drone can fly — see the [Abilities Reference](abilities.html) for rotor details and other useful blocks.
 
 <!-- IMAGE: screenshot of a simple drone built on the assembly platform, e.g. a small frame with a rotor and a dispenser -->
