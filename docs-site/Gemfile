@@ -1,0 +1,10 @@
+source "https://rubygems.org"
+
+gem "jekyll", "~> 4.4"
+gem "jekyll-remote-theme"
+gem "jekyll-seo-tag"
+gem "jekyll-feed"
+gem "jekyll-github-metadata"
+
+# Required for `jekyll serve` on Ruby 3.0+
+gem "webrick"

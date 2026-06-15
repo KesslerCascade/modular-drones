@@ -5,6 +5,10 @@
 /common/.gradle/
 /common/build/
 /common/build/classes/java/main/
+/docs-site/.bundle/
+/docs-site/.jekyll-cache/
+/docs-site/_site/
+/docs-site/vendor/
 /fabric/.gradle/
 /fabric/build/
 /fabric/run/
