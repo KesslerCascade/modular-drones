@@ -1,6 +1,9 @@
 {
   "variants": {
-    "": {
+    "half=bottom": {
+      "model": "drones:block/wood_rotor_bottom"
+    },
+    "half=top": {
       "model": "drones:block/wood_rotor"
     }
   }
