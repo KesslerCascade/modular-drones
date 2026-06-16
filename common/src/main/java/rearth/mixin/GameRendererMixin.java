@@ -1,9 +1,9 @@
-package rearth.fabric.mixin;
+package rearth.mixin;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
-import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
