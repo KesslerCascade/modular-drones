@@ -6,7 +6,7 @@ A Minecraft mod for Fabric and NeoForge, supporting 1.21.1, 1.21.11, and 26.1.2.
 
 ## About
 
-Modular Drones is a fork of rearth's [Buddy Drones](https://github.com/rearth/Buddy-Drones), originally created for the CurseForge "The Future" modjam. This project has since taken on its own direction with new features, fixes, and improvements beyond the original.
+Modular Drones is a fork of rearth's [Buddy Drones](https://github.com/rearth/Drone_Buddies), originally created for the CurseForge "The Future" modjam. This project has since taken on its own direction with new features, fixes, and improvements beyond the original.
 
 ## Building
 
