@@ -11,7 +11,7 @@ A version-by-version history of notable changes since this fork began (Buddy Dro
 the original mod; this fork's history starts at 1.1.1). For a full summary of how this fork differs from the
 original mod overall, see [Changes from the Original Mod](changes.html).
 
-## Unreleased (future release)
+## 1.3.0
 
 ### Ion Thruster visual rework
 
@@ -19,6 +19,16 @@ original mod overall, see [Changes from the Original Mod](changes.html).
 - A pulsing glow effect renders beneath each Ion Thruster while the drone is in flight.
 - Ion Thrusters display connector "arms" when placed next to solid blocks, so they look properly attached to the
   drone's frame.
+
+### Rotor placement flexibility
+
+- Wooden Rotors and Advanced Rotors can now be placed at the top or bottom of a block, like a slab. This gives more
+  flexibility in positioning rotors when constructing drones.
+
+### Other fixes and improvements
+
+- The controller now remembers a drone's name when you place it back on the platform for re-editing.
+- Fixed a bug where tall drones could not be placed back on the platform for editing.
 - Fixed the drone spinning unexpectedly when its rotation was near the wraparound point (e.g. crossing from 359° to 0°).
 
 ## 1.2.5

@@ -17,6 +17,13 @@ you, picking up loot, lighting your way, and more.
 
 New to the mod? Head to the **[Getting Started](getting-started.html)** guide to build and equip your first drone.
 
+## Upgrading to 1.21.11 or later?
+
+**Accessories mod support has been dropped** for 1.21.11 and above, as that mod is no longer maintained for those
+versions. The dedicated Drone slot is now provided by **Curios** (NeoForge) or **Trinkets** (Fabric) instead — install
+one of those to avoid having to equip your drone in the helmet slot. If you are upgrading an existing world, you will
+need to move your Pocket Drone out of the Accessories slot before updating.
+
 ## Explore further
 
 - **[Abilities Reference](abilities.html)** — every ability a drone can have, the block that enables it, and any special
