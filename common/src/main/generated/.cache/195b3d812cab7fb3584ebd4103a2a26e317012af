@@ -1,7 +1,0 @@
-// 1.21.11	-999999999-01-01T00:00:00	Modular Drones/Block Loot Tables
-77d86903bb01a864fe06cd0153f8380ab207d842 data/drones/loot_table/blocks/controller.json
-730e777c6c69ce084dfe0dfedb0c47ca031aedfe data/drones/loot_table/blocks/drill.json
-f42aeff73394068925585f9fd97148e268b01f0c data/drones/loot_table/blocks/frame.json
-c76e368e6276266b831470f5b2f440fa66939b6e data/drones/loot_table/blocks/ion_thruster.json
-7b4d66139079c3dc6f507fa526f52e05489821a5 data/drones/loot_table/blocks/iron_rotor.json
-7c47356492409f25d38650d8dc8aaf46b593ca45 data/drones/loot_table/blocks/wood_rotor.json
