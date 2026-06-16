@@ -34,11 +34,9 @@ public class BlockTagGenerator extends FabricTagsProvider.BlockTagsProvider {
           .addOptionalTag(TagContent.ULTRA_THRUSTER);
 
         builder(TagContent.LOW_THRUSTER)
-          .addOptionalTag(BlockTags.WOODEN_TRAPDOORS)
           .add(BlockContent.WOOD_ROTOR.get().builtInRegistryHolder().key());
 
         builder(TagContent.MEDIUM_THRUSTER)
-          .add(Blocks.IRON_TRAPDOOR.builtInRegistryHolder().key())
           .add(BlockContent.IRON_ROTOR.get().builtInRegistryHolder().key());
 
         builder(TagContent.HIGH_THRUSTER)

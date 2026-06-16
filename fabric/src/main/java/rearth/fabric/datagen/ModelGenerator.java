@@ -37,15 +37,24 @@ public class ModelGenerator extends FabricModelProvider {
 
     @Override
     public void generateBlockStateModels(BlockModelGenerators blockStateModelGenerator) {
-
-        registerNonTemplateModelBlock(BlockContent.WOOD_ROTOR.get(), blockStateModelGenerator);
-        registerNonTemplateModelBlock(BlockContent.IRON_ROTOR.get(), blockStateModelGenerator);
-        blockStateModelGenerator.createNonTemplateModelBlock(BlockContent.WOOD_ROTOR.get());
-        blockStateModelGenerator.createNonTemplateModelBlock(BlockContent.IRON_ROTOR.get());
+        registerRotor(BlockContent.WOOD_ROTOR.get(), blockStateModelGenerator);
+        registerRotor(BlockContent.IRON_ROTOR.get(), blockStateModelGenerator);
         registerIonThruster(BlockContent.ION_THRUSTER.get(), blockStateModelGenerator);
         registerHorizontalFacing(BlockContent.DRILL.get(), blockStateModelGenerator);
         registerController(BlockContent.ASSEMBLER_CONTROLLER.get(), blockStateModelGenerator);
         registerFrame(BlockContent.ASSEMBLER_FRAME.get(), blockStateModelGenerator);
+    }
+
+    public void registerRotor(Block block, BlockModelGenerators blockStateModelGenerator) {
+        var topModel = ModelLocationUtils.getModelLocation(block);
+        var bottomModel = ModelLocationUtils.getModelLocation(block, "_bottom");
+
+        blockStateModelGenerator.blockStateOutput.accept(
+          MultiVariantGenerator.dispatch(block)
+            .with(PropertyDispatch.initial(net.minecraft.world.level.block.state.properties.BlockStateProperties.HALF)
+                    .select(net.minecraft.world.level.block.state.properties.Half.TOP, new MultiVariant(WeightedList.of(new Variant(topModel))))
+                    .select(net.minecraft.world.level.block.state.properties.Half.BOTTOM, new MultiVariant(WeightedList.of(new Variant(bottomModel)))))
+        );
     }
 
     public void registerController(Block block, BlockModelGenerators blockStateModelGenerator) {

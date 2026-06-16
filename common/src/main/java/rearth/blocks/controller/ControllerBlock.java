@@ -11,6 +11,7 @@ import rearth.init.NetworkContent;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -70,7 +71,7 @@ public class ControllerBlock extends BaseEntityBlock {
         if (!world.isClientSide() && player instanceof ServerPlayer serverPlayer) {
             var candidate = world.getBlockEntity(pos, BlockEntitiesContent.ASSEMBLER_CONTROLLER.get());
             candidate.ifPresent(controllerBlockEntity ->
-                                  NetworkManager.sendToPlayer(serverPlayer, new NetworkContent.OpenDroneScreenPacket(pos))
+                                  NetworkManager.sendToPlayer(serverPlayer, new NetworkContent.OpenDroneScreenPacket(pos, controllerBlockEntity.getLastDroneName()))
             );
         }
 
@@ -88,7 +89,9 @@ public class ControllerBlock extends BaseEntityBlock {
 
             var candidate = world.getBlockEntity(pos, BlockEntitiesContent.ASSEMBLER_CONTROLLER.get());
             if (candidate.isPresent() && !world.isClientSide()) {
-                var imported = candidate.get().loadDroneToWorld(stackData, player);
+                var customName = stack.get(DataComponents.CUSTOM_NAME);
+                var droneName = customName != null ? customName.getString() : "Dronie";
+                var imported = candidate.get().loadDroneToWorld(stackData, player, droneName);
                 if (imported) {
                     stack.shrink(1);
                     return InteractionResult.CONSUME;

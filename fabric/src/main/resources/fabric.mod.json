@@ -5,12 +5,12 @@
   "name": "Modular Drones",
   "description": "Allows you to build modular drones.",
   "authors": [
-    "rearth",
-    "KesslerCascade"
+    "KesslerCascade",
+    "rearth"
   ],
   "contact": {
-    "homepage": "https://github.com/KesslerCascade/ModularDronesContinued",
-    "sources": "https://github.com/KesslerCascade/ModularDronesContinued"
+    "homepage": "https://kesslercascade.github.io/modular-drones/",
+    "sources": "https://github.com/KesslerCascade/modular-drones"
   },
   "license": "CC-BY-4.0",
   "icon": "assets/drones/icon.png",

@@ -53,10 +53,12 @@ public class DroneCreatorScreen extends Screen {
     
     private float previewAngle = 0;
     private EditBox nameField;
-    
-    public DroneCreatorScreen(DroneData data, BlockPos machinePos) {
+    private final String initialName;
+
+    public DroneCreatorScreen(DroneData data, BlockPos machinePos, String initialName) {
         super(Component.empty());
         this.machinePos = machinePos;
+        this.initialName = initialName == null || initialName.isBlank() ? "Dronie" : initialName;
         
         if (data == null)
             data = new DroneData(List.of(), 1, Vec3i.ZERO);
@@ -100,7 +102,7 @@ public class DroneCreatorScreen extends Screen {
         nameField = new EditBox(this.font, nameX, nameY, 138, 32, Component.literal("Input"));
         nameField.setMaxLength(32);
         nameField.setTooltip(Tooltip.create(Component.translatable("tooltip.drones.name_field")));
-        nameField.setValue("Dronie");
+        nameField.setValue(initialName);
         this.addRenderableWidget(nameField);
         
     }

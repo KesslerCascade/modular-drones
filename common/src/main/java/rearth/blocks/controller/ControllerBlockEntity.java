@@ -1,6 +1,8 @@
 package rearth.blocks.controller;
 
 import io.netty.buffer.ByteBuf;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 import rearth.Drones;
 import rearth.drone.DroneData;
@@ -44,8 +46,26 @@ public class ControllerBlockEntity extends BlockEntity {
     public static final float HIGH_THRUSTER_POWER = 40f;
     public static final float ULTRA_THRUSTER_POWER = 60f;
     
+    private String lastDroneName = "";
+
     public ControllerBlockEntity(BlockPos pos, BlockState state) {
         super(BlockEntitiesContent.ASSEMBLER_CONTROLLER.get(), pos, state);
+    }
+
+    public String getLastDroneName() {
+        return lastDroneName;
+    }
+
+    @Override
+    protected void saveAdditional(ValueOutput tag) {
+        super.saveAdditional(tag);
+        tag.putString("last_drone_name", lastDroneName);
+    }
+
+    @Override
+    protected void loadAdditional(ValueInput tag) {
+        super.loadAdditional(tag);
+        lastDroneName = tag.getStringOr("last_drone_name", "");
     }
     
     public List<BlockPos> getPlatformBlocks() {
@@ -123,14 +143,14 @@ public class ControllerBlockEntity extends BlockEntity {
         var dataX = 0d;
         var dataY = 0d;
         var dataZ = 0d;
-        
+
         for (var pos : positions) {
             var center = pos.getCenter();
             dataX += center.x;
             dataY += center.y;
             dataZ += center.z;
         }
-        
+
         var realCOM = new Vec3(dataX / positions.size(), dataY / positions.size(), dataZ / positions.size());
         return BlockPos.containing(realCOM);
     }
@@ -143,7 +163,7 @@ public class ControllerBlockEntity extends BlockEntity {
         return Optional.empty();
     }
     
-    public boolean loadDroneToWorld(DroneData data, Player player) {
+    public boolean loadDroneToWorld(DroneData data, Player player, String droneName) {
 
         if (getCurrentDroneData() != null) {
             player.sendOverlayMessage(Component.translatable("drone.message.platform_occupied"));
@@ -166,6 +186,14 @@ public class ControllerBlockEntity extends BlockEntity {
             return false;
         }
 
+        // the recorded local positions are relative to the drone's center of mass, which can have a negative
+        // Y component for tall drones. Shift the placement origin up so the lowest block still lands on the platform.
+        var minLocalY = 0;
+        for (var rotatedBlock : rotatedBlocks) {
+            minLocalY = Math.min(minLocalY, rotatedBlock.localPos().getY());
+        }
+        var placementUpShift = -minLocalY;
+
         var candidates = new ArrayList<BlockPos>();
         for (var frameBlock : platformBlocks) {
             var above = frameBlock.above();
@@ -174,7 +202,8 @@ public class ControllerBlockEntity extends BlockEntity {
         candidates.sort(Comparator.comparingDouble(pos -> pos.distSqr(worldPosition)));
 
         BlockPos chosenCenter = null;
-        for (var candidateCenter : candidates) {
+        for (var candidate : candidates) {
+            var candidateCenter = candidate.above(placementUpShift);
             var fits = true;
             for (var rotatedBlock : rotatedBlocks) {
                 var worldPos = candidateCenter.offset(rotatedBlock.localPos());
@@ -193,6 +222,9 @@ public class ControllerBlockEntity extends BlockEntity {
             player.sendOverlayMessage(Component.translatable("drone.message.platform_too_small"));
             return false;
         }
+
+        lastDroneName = droneName;
+        setChanged();
 
         level.playSound(null, worldPosition, SoundEvents.SHROOMLIGHT_PLACE, SoundSource.BLOCKS, 1f, 1f);
 
@@ -229,6 +261,9 @@ public class ControllerBlockEntity extends BlockEntity {
         var createdStack = new ItemStack(ItemContent.POCKET_DRONE);
         createdStack.set(DataComponents.CUSTOM_NAME, Component.literal(name));
         createdStack.set(ComponentContent.DRONE_DATA_TYPE.get(), droneData);
+
+        lastDroneName = name;
+        setChanged();
         
         var itemEntity = new ItemEntity(level, player.getX(), player.getY(), player.getZ(), createdStack);
         level.addFreshEntity(itemEntity);
