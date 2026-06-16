@@ -11,6 +11,11 @@ Modular Drones lets you build your own personal drone out of regular blocks, the
 it, and it'll hover behind you, helping out based on the blocks it's made of — fighting off enemies, mining alongside
 you, picking up loot, lighting your way, and more.
 
+## Download
+
+- **[Get it on Modrinth](https://modrinth.com/mod/modular-drones)**
+- **[Get it on CurseForge](https://www.curseforge.com/minecraft/mc-mods/modular-drones)**
+
 <div style="clear: both;"></div>
 
 ## Get started
