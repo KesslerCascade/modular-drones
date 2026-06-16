@@ -1,8 +1,8 @@
 package rearth.blocks.controller;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 import rearth.Drones;
 import rearth.drone.DroneData;
@@ -57,15 +57,15 @@ public class ControllerBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(ValueOutput tag) {
+        super.saveAdditional(tag);
         tag.putString("last_drone_name", lastDroneName);
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        lastDroneName = tag.getString("last_drone_name");
+    protected void loadAdditional(ValueInput tag) {
+        super.loadAdditional(tag);
+        lastDroneName = tag.getStringOr("last_drone_name", "");
     }
     
     public List<BlockPos> getPlatformBlocks() {

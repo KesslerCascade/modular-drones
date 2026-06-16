@@ -49,10 +49,10 @@ public class ModelGenerator extends FabricModelProvider {
         var bottomModel = ModelLocationUtils.getModelLocation(block, "_bottom");
 
         blockStateModelGenerator.blockStateOutput.accept(
-          MultiVariantGenerator.multiVariant(block)
-            .with(PropertyDispatch.property(net.minecraft.world.level.block.state.properties.BlockStateProperties.HALF)
-                    .select(net.minecraft.world.level.block.state.properties.Half.TOP, Variant.variant().with(VariantProperties.MODEL, topModel))
-                    .select(net.minecraft.world.level.block.state.properties.Half.BOTTOM, Variant.variant().with(VariantProperties.MODEL, bottomModel)))
+          MultiVariantGenerator.dispatch(block)
+            .with(PropertyDispatch.initial(net.minecraft.world.level.block.state.properties.BlockStateProperties.HALF)
+                    .select(net.minecraft.world.level.block.state.properties.Half.TOP, new MultiVariant(WeightedList.of(new Variant(topModel))))
+                    .select(net.minecraft.world.level.block.state.properties.Half.BOTTOM, new MultiVariant(WeightedList.of(new Variant(bottomModel)))))
         );
     }
 
