@@ -12,9 +12,9 @@ show_downloads: false
 # Used to build absolute links within the site; GitHub Pages sets this
 # automatically when served from a project page, but it's useful for
 # local testing too. Update if the repo is renamed.
-baseurl: "/ModularDronesContinued"
+baseurl: "/modular-drones"
 
 # Tells jekyll-github-metadata which repo to pull owner/repo info from
 # (used for the "Project maintained by ..." footer line). Update this to
 # the actual GitHub <owner>/<repo> once the site has a home there.
-repository: KesslerCascade/ModularDronesContinued
+repository: KesslerCascade/modular-drones
