@@ -72,7 +72,7 @@ dependencies {
     implementation("maven.modrinth:trinkets-updated:${rootProject.trinkets_version}")
     implementation "org.ladysnake.cardinal-components-api:cardinal-components-base:8.0.0"
     implementation "org.ladysnake.cardinal-components-api:cardinal-components-entity:8.0.0"
-    implementation("maven.modrinth:rdpmouse:1.0.0-fabric,${rootProject.minecraft_version}")
+    implementation("maven.modrinth:rdpmouse:${rootProject.minecraft_version}-fabric-1.0.0")
 }
 
 processResources {

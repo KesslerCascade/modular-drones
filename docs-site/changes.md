@@ -101,5 +101,5 @@ This is a purely visual upgrade — thrust and power values are unchanged.
 ## Miscellaneous
 
 - Using a Beacon for the laser/sonic attack no longer looks silly — it's rotated to face forward on the drone.
-- Fixed a bug that let players break bedrock and other unbreakable blocks with the mining support ability.
+- Fixed a bug that let players break/move bedrock and other unbreakable blocks.
 - Unified attack cooldowns across all attack types for consistency.

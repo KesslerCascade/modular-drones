@@ -60,7 +60,7 @@ dependencies {
     shadowBundle project(path: ':common', configuration: 'transformProductionNeoForge')
 
     implementation("top.theillusivec4.curios:curios-neoforge:${rootProject.curios_version}")
-    implementation("maven.modrinth:rdpmouse:1.0.0-neoforge,${rootProject.minecraft_version}")
+    implementation("maven.modrinth:rdpmouse:${rootProject.minecraft_version}-neoforge-1.0.0")
 }
 
 processResources {
