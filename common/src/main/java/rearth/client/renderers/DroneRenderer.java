@@ -23,11 +23,11 @@ import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.platform.CompareOp;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.Sheets;
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -64,13 +64,14 @@ public class DroneRenderer {
       .withShaderDefine("EMISSIVE")
       .withShaderDefine("NO_OVERLAY")
       .withShaderDefine("NO_CARDINAL_LIGHTING")
-      .withSampler("Sampler0")
-      .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
-      .withUniform("Projection", UniformType.UNIFORM_BUFFER)
-      .withUniform("Fog", UniformType.UNIFORM_BUFFER)
+      .withBindGroupLayout(BindGroupLayouts.GLOBALS)
+      .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+      .withBindGroupLayout(BindGroupLayouts.FOG)
+      .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
       .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
       .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
-      .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
+      .withVertexBinding(0, DefaultVertexFormat.ENTITY)
+      .withPrimitiveTopology(PrimitiveTopology.QUADS)
       .build();
 
     private static final RenderType ION_GLOW_RENDER_TYPE = RenderType.create(

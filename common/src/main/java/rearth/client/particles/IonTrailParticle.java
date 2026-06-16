@@ -1,14 +1,14 @@
 package rearth.client.particles;
 
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.particle.SpriteSet;
+import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.util.LightCoordsUtil;
 
@@ -20,13 +20,13 @@ public class IonTrailParticle extends SingleQuadParticle {
       .withLocation("pipeline/drones_additive_particle")
       .withVertexShader("core/particle")
       .withFragmentShader("core/particle")
-      .withSampler("Sampler0")
-      .withSampler("Sampler2")
-      .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
-      .withUniform("Projection", UniformType.UNIFORM_BUFFER)
-      .withUniform("Fog", UniformType.UNIFORM_BUFFER)
+      .withBindGroupLayout(BindGroupLayouts.GLOBALS)
+      .withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
+      .withBindGroupLayout(BindGroupLayouts.FOG)
+      .withBindGroupLayout(BindGroupLayouts.SAMPLER0_SAMPLER2)
       .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
-      .withVertexFormat(DefaultVertexFormat.PARTICLE, VertexFormat.Mode.QUADS)
+      .withVertexBinding(0, DefaultVertexFormat.PARTICLE)
+      .withPrimitiveTopology(PrimitiveTopology.QUADS)
       .build();
 
     private static final SingleQuadParticle.Layer ADDITIVE_LAYER = new SingleQuadParticle.Layer(
