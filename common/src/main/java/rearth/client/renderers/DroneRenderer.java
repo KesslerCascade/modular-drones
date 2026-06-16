@@ -21,7 +21,6 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.platform.CompareOp;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.Sheets;
 import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.pipeline.BlendFunction;
@@ -307,11 +306,11 @@ public class DroneRenderer {
     }
 
     private static int getMaxLight(BlockPos center, Level world) {
-        var bestLight = LevelRenderer.getLightCoords(world, center);
+        var bestLight = LightCoordsUtil.getLightCoords(world, center);
 
         for (var side : FloodFill.GetNeighbors(center)) {
-            var candidate = LevelRenderer.getLightCoords(world, side);
-            bestLight = Math.max(candidate, bestLight);
+            var candidate = LightCoordsUtil.getLightCoords(world, side);
+            bestLight = LightCoordsUtil.max(candidate, bestLight);
         }
 
         return bestLight;

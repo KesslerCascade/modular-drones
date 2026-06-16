@@ -22,7 +22,7 @@ public abstract class LevelRendererMixin {
       LevelRenderState levelRenderState, SubmitNodeCollector submitNodeCollector, boolean renderOutline,
       CallbackInfo ci
     ) {
-        var camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+        var camera = Minecraft.getInstance().gameRenderer.mainCamera();
         DroneRenderer.doRender(new PoseStack(), camera, submitNodeCollector);
     }
 }

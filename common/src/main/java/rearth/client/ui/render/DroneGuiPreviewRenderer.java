@@ -42,7 +42,7 @@ public class DroneGuiPreviewRenderer extends PictureInPictureRenderer<DroneGuiPr
         poseStack.mulPose(Axis.YP.rotationDegrees(state.yRotation()));
 
         var dispatcher = this.blockEntityRenderDispatcher;
-        dispatcher.prepare(minecraft.gameRenderer.getMainCamera().position());
+        dispatcher.prepare(minecraft.gameRenderer.mainCamera().position());
 
         var cameraRenderState = new CameraRenderState();
 
