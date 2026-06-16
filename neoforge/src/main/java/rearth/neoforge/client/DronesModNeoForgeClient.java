@@ -23,9 +23,10 @@ public class DronesModNeoForgeClient {
 
     public DronesModNeoForgeClient(IEventBus eventBus) {
         eventBus.addListener((FMLClientSetupEvent event) -> DronesClient.init());
+        // TODO 26.2: RegisterPictureInPictureRenderersEvent lambda no longer receives a bufferSource
         eventBus.addListener((RegisterPictureInPictureRenderersEvent event) -> event.register(
           DroneGuiPreviewRenderState.class,
-          bufferSource -> new DroneGuiPreviewRenderer(bufferSource, Minecraft.getInstance().getBlockEntityRenderDispatcher())
+          () -> new DroneGuiPreviewRenderer(Minecraft.getInstance().getBlockEntityRenderDispatcher())
         ));
         eventBus.addListener((RegisterParticleProvidersEvent event) -> event.registerSpriteSet(ParticleContent.ION_TRAIL.get(), IonTrailParticleProvider::new));
     }
@@ -36,7 +37,8 @@ public class DronesModNeoForgeClient {
         @SubscribeEvent
         public static void onWorldRender(RenderLevelStageEvent.AfterTranslucentFeatures event) {
             var camera = Minecraft.getInstance().gameRenderer.getMainCamera();
-            DroneRenderer.doRender(event.getPoseStack(), camera, Minecraft.getInstance().renderBuffers().bufferSource());
+            // TODO 26.2: replace event.getSubmitNodeCollector() with whatever NeoForge exposes
+            DroneRenderer.doRender(event.getPoseStack(), camera, event.getSubmitNodeCollector());
         }
     }
 }

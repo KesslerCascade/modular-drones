@@ -15,21 +15,13 @@ import com.mojang.math.Axis;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
-import org.jetbrains.annotations.Nullable;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.model.Model;
-import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.player.AbstractClientPlayer;
 import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.platform.CompareOp;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
 import net.minecraft.client.renderer.Sheets;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
@@ -39,25 +31,14 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.block.MovingBlockRenderState;
-import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.core.Vec3i;
-import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
-import com.mojang.blaze3d.vertex.QuadInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -67,7 +48,6 @@ import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 public class DroneRenderer {
@@ -103,7 +83,7 @@ public class DroneRenderer {
     private static final float ION_TRAIL_IDLE_CHANCE_SCALE = 0.05f;
     private static final double ION_TRAIL_VELOCITY_THRESHOLD = 0.05;
     
-    public static void doRender(PoseStack matrices, Camera camera, MultiBufferSource vertexConsumers) {
+    public static void doRender(PoseStack matrices, Camera camera, SubmitNodeCollector submitNodeCollector) {
         var world = Minecraft.getInstance().level;
         if (world == null) return;
 
@@ -111,8 +91,6 @@ public class DroneRenderer {
         cameraRenderState.pos = camera.position();
         cameraRenderState.blockPos = camera.blockPosition();
 
-        var collector = new ImmediateSubmitNodeCollector(vertexConsumers);
-        
         for (var dronePlayer : world.players()) {
             
             var droneCandidate = DroneController.getDroneOfPlayer(dronePlayer);
@@ -198,8 +176,8 @@ public class DroneRenderer {
                 var light = getMaxLight(BlockPos.containing(movementData.position()), world);
                 
                 // render baked / animated block
-                renderSingleBlock(state, matrices, collector, world, BlockPos.containing(movementData.position()), light, OverlayTexture.NO_OVERLAY);
-                
+                renderSingleBlock(state, matrices, submitNodeCollector, world, BlockPos.containing(movementData.position()), light, OverlayTexture.NO_OVERLAY);
+
                 // render optional custom entity renderer
                 if (state.getBlock() instanceof EntityBlock blockEntityProvider) {
                     var blockEntity = blockEntityProvider.newBlockEntity(new BlockPos(localOffset), state);
@@ -209,7 +187,7 @@ public class DroneRenderer {
                         dispatcher.prepare(camera.position());
                         var renderState = dispatcher.tryExtractRenderState(blockEntity, 0, null);
                         if (renderState != null) {
-                            dispatcher.submit(renderState, matrices, collector, cameraRenderState);
+                            dispatcher.submit(renderState, matrices, submitNodeCollector, cameraRenderState);
                         }
                     }
                 }
@@ -232,25 +210,23 @@ public class DroneRenderer {
                   null,
                   0
                 );
-                itemRenderState.submit(matrices, collector, itemLight, OverlayTexture.NO_OVERLAY, -1);
+                itemRenderState.submit(matrices, submitNodeCollector, itemLight, OverlayTexture.NO_OVERLAY, -1);
                 matrices.popPose();
             }
 
             // render additive glow billboards for ion thruster blocks
             if (!ionGlowPositions.isEmpty()) {
-                // Flush the drone's block geometry to the framebuffer first, so the depth buffer is
-                // populated before the glow (which doesn't write depth) is drawn. Without this, the
-                // glow's shared buffer gets flushed before the blocks' fixed buffers, causing the
-                // blocks to overwrite the glow even where the glow should render in front of them.
-                if (vertexConsumers instanceof MultiBufferSource.BufferSource bufferSource) {
-                    bufferSource.endBatch();
-                }
-
-                var glowBuffer = vertexConsumers.getBuffer(ION_GLOW_RENDER_TYPE);
-                var time = System.currentTimeMillis() / 1000.0;
-                for (var i = 0; i < ionGlowPositions.size(); i++) {
-                    renderGlowQuad(glowBuffer, ionGlowPositions.get(i), targetScale, camera, time, i);
-                }
+                // Submit at order 1 so the feature renderer executes this group after the opaque block
+                // geometry at order 0, ensuring the depth buffer is populated before the glow draws.
+                // This replaces the old BufferSource.endBatch() flush that served the same purpose.
+                final var capturedPositions = List.copyOf(ionGlowPositions);
+                final var capturedScale = targetScale;
+                final var capturedTime = System.currentTimeMillis() / 1000.0;
+                submitNodeCollector.order(1).submitCustomGeometry(matrices, ION_GLOW_RENDER_TYPE, (pose, buffer) -> {
+                    for (var i = 0; i < capturedPositions.size(); i++) {
+                        renderGlowQuad(buffer, capturedPositions.get(i), capturedScale, camera, capturedTime, i);
+                    }
+                });
             }
 
             matrices.popPose();
@@ -266,120 +242,6 @@ public class DroneRenderer {
         
     }
     
-    /**
-     * Minimal SubmitNodeCollector adapter that immediately renders submitted geometry into an
-     * existing PoseStack/MultiBufferSource pair, instead of deferring it for later draining.
-     * Only the methods actually used by block entity renderers and item rendering in this mod
-     * are implemented; everything else is a no-op.
-     */
-    public static class ImmediateSubmitNodeCollector implements SubmitNodeCollector, OrderedSubmitNodeCollector {
-
-        private final MultiBufferSource bufferSource;
-
-        public ImmediateSubmitNodeCollector(MultiBufferSource bufferSource) {
-            this.bufferSource = bufferSource;
-        }
-
-        @Override
-        public OrderedSubmitNodeCollector order(int order) {
-            return this;
-        }
-
-        @Override
-        public void submitShadow(PoseStack poseStack, float radius, List<EntityRenderState.ShadowPiece> shadowPieces) {
-        }
-
-        @Override
-        public void submitNameTag(PoseStack poseStack, @Nullable Vec3 pos, int packedLight, Component text, boolean seeThrough, int backgroundColor, double distanceSq, CameraRenderState cameraRenderState) {
-        }
-
-        @Override
-        public void submitText(PoseStack poseStack, float x, float y, FormattedCharSequence text, boolean dropShadow, Font.DisplayMode displayMode, int packedLight, int backgroundColor, int color, int outlineColor) {
-        }
-
-        @Override
-        public void submitFlame(PoseStack poseStack, EntityRenderState entityRenderState, Quaternionf quaternionf) {
-        }
-
-        @Override
-        public void submitLeash(PoseStack poseStack, EntityRenderState.LeashState leashState) {
-        }
-
-        @Override
-        public <S> void submitModel(Model<? super S> model, S state, PoseStack poseStack, RenderType renderType, int packedLight, int packedOverlay, int color, @Nullable TextureAtlasSprite sprite, int outlineColor, @Nullable ModelFeatureRenderer.CrumblingOverlay crumblingOverlay) {
-            var vertexConsumer = bufferSource.getBuffer(renderType);
-            model.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-        }
-
-        @Override
-        public void submitModelPart(ModelPart modelPart, PoseStack poseStack, RenderType renderType, int packedLight, int packedOverlay, @Nullable TextureAtlasSprite sprite, boolean outline, boolean crumbling, int outlineColor, @Nullable ModelFeatureRenderer.CrumblingOverlay crumblingOverlay, int color) {
-            var vertexConsumer = bufferSource.getBuffer(renderType);
-            modelPart.render(poseStack, vertexConsumer, packedLight, packedOverlay, color);
-        }
-
-        @Override
-        public void submitMovingBlock(PoseStack poseStack, MovingBlockRenderState movingBlockRenderState) {
-        }
-
-        @Override
-        public void submitBreakingBlockModel(PoseStack poseStack, BlockStateModel model, long seed, int progress) {
-        }
-
-        @Override
-        public void submitBlockModel(PoseStack poseStack, RenderType renderType, List<BlockStateModelPart> parts, int[] tintLayers, int packedLight, int packedOverlay, int outlineColor) {
-            var vertexConsumer = bufferSource.getBuffer(renderType);
-            var pose = poseStack.last();
-            var quadInstance = new QuadInstance();
-            quadInstance.setLightCoords(packedLight);
-            quadInstance.setOverlayCoords(packedOverlay);
-
-            for (var part : parts) {
-                for (var direction : Direction.values()) {
-                    for (var quad : part.getQuads(direction)) {
-                        putQuad(pose, quad, quadInstance, tintLayers, vertexConsumer);
-                    }
-                }
-                for (var quad : part.getQuads(null)) {
-                    putQuad(pose, quad, quadInstance, tintLayers, vertexConsumer);
-                }
-            }
-        }
-
-        private static void putQuad(PoseStack.Pose pose, BakedQuad quad, QuadInstance quadInstance, int[] tintLayers, com.mojang.blaze3d.vertex.VertexConsumer buffer) {
-            var tintIndex = quad.materialInfo().tintIndex();
-            var hasTint = tintIndex != -1 && tintIndex < tintLayers.length;
-            quadInstance.setColor(hasTint ? tintLayers[tintIndex] : -1);
-            buffer.putBakedQuad(pose, quad, quadInstance);
-        }
-
-        @Override
-        public void submitItem(PoseStack poseStack, ItemDisplayContext displayContext, int packedLight, int packedOverlay, int outlineColor, int[] tintLayers, List<BakedQuad> quads, ItemStackRenderState.FoilType foilType) {
-            var pose = poseStack.last();
-            var quadInstance = new QuadInstance();
-            quadInstance.setLightCoords(packedLight);
-            quadInstance.setOverlayCoords(packedOverlay);
-
-            for (var quad : quads) {
-                var material = quad.materialInfo();
-                var renderType = material.itemRenderType();
-                var hasTint = material.isTinted();
-                var tintIndex = material.tintIndex();
-                quadInstance.setColor(hasTint && tintIndex >= 0 && tintIndex < tintLayers.length ? tintLayers[tintIndex] : -1);
-                bufferSource.getBuffer(renderType).putBakedQuad(pose, quad, quadInstance);
-            }
-        }
-
-        @Override
-        public void submitCustomGeometry(PoseStack poseStack, RenderType renderType, SubmitNodeCollector.CustomGeometryRenderer renderer) {
-            var vertexConsumer = bufferSource.getBuffer(renderType);
-            renderer.render(poseStack.last(), vertexConsumer);
-        }
-
-        @Override
-        public void submitParticleGroup(SubmitNodeCollector.ParticleGroupRenderer particleGroupRenderer) {
-        }
-    }
-
     private static void renderGlowQuad(VertexConsumer buffer, Vector3f center, float size, Camera camera, double time, int thrusterIndex) {
         var rotation = camera.rotation();
         var half = size * 0.4f;
@@ -454,7 +316,7 @@ public class DroneRenderer {
         return bestLight;
     }
 
-    public static void renderSingleBlock(BlockState state, PoseStack poseStack, ImmediateSubmitNodeCollector collector, ClientLevel world, BlockPos pos, int packedLight, int packedOverlay) {
+    public static void renderSingleBlock(BlockState state, PoseStack poseStack, SubmitNodeCollector collector, ClientLevel world, BlockPos pos, int packedLight, int packedOverlay) {
         var model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(state);
         var parts = new ArrayList<BlockStateModelPart>();
         model.collectParts(RandomSource.create(state.getSeed(pos)), parts);

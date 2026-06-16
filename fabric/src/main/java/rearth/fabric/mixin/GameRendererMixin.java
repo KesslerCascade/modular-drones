@@ -4,7 +4,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -20,16 +19,14 @@ public abstract class GameRendererMixin {
       method = "<init>",
       at = @At(
         value = "INVOKE",
-        target = "Lnet/minecraft/client/gui/render/GuiRenderer;<init>(Lnet/minecraft/client/renderer/state/gui/GuiRenderState;Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;Ljava/util/List;)V"
+        // 26.2: GuiRenderer.<init>(GuiRenderState, FeatureRenderDispatcher, List)
+        target = "Lnet/minecraft/client/gui/render/GuiRenderer;<init>(Lnet/minecraft/client/renderer/state/gui/GuiRenderState;Lnet/minecraft/client/renderer/feature/FeatureRenderDispatcher;Ljava/util/List;)V"
       ),
-      index = 4
+      index = 2
     )
     private List<PictureInPictureRenderer<? extends PictureInPictureRenderState>> drones$addPreviewRenderer(List<PictureInPictureRenderer<? extends PictureInPictureRenderState>> renderers) {
-        var minecraft = Minecraft.getInstance();
-        var bufferSource = (MultiBufferSource.BufferSource) minecraft.renderBuffers().bufferSource();
-
         var extended = new ArrayList<>(renderers);
-        extended.add(new DroneGuiPreviewRenderer(bufferSource, minecraft.getBlockEntityRenderDispatcher()));
+        extended.add(new DroneGuiPreviewRenderer(Minecraft.getInstance().getBlockEntityRenderDispatcher()));
         return extended;
     }
 }

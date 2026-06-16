@@ -4,9 +4,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.Camera;
-import net.minecraft.client.renderer.MultiBufferSource;
 import rearth.DronesClient;
 import rearth.client.particles.IonTrailParticleProvider;
 import rearth.client.renderers.DroneRenderer;
@@ -21,13 +19,10 @@ public final class DronesModFabricClient implements ClientModInitializer {
     }
 
     private static void renderWorld(LevelRenderContext context) {
-
         var matrices = context.poseStack();
         var camera = context.gameRenderer().getMainCamera();
-        var vertexConsumers = context.bufferSource();
-
-        DroneRenderer.doRender(matrices, camera, vertexConsumers);
-
+        // TODO 26.2: replace context.bufferSource() with whatever Fabric API exposes as SubmitNodeCollector
+        DroneRenderer.doRender(matrices, camera, context.submitNodeCollector());
     }
 
 
