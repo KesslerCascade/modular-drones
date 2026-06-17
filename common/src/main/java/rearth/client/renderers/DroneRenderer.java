@@ -68,7 +68,7 @@ public class DroneRenderer {
       .withBindGroupLayout(BindGroupLayouts.FOG)
       .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
       .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
-      .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
+      .withDepthStencilState(new DepthStencilState(CompareOp.GREATER_THAN_OR_EQUAL, false))
       .withVertexBinding(0, DefaultVertexFormat.ENTITY)
       .withPrimitiveTopology(PrimitiveTopology.QUADS)
       .build();
