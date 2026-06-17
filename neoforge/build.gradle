@@ -59,7 +59,7 @@ dependencies {
     common(project(path: ':common')) { transitive = false }
     shadowBundle project(path: ':common', configuration: 'transformProductionNeoForge')
 
-    implementation("top.theillusivec4.curios:curios-neoforge:${rootProject.curios_version}")
+    compileOnly("top.theillusivec4.curios:curios-neoforge:${rootProject.curios_version}")
     implementation("maven.modrinth:rdpmouse:${rootProject.minecraft_version}-neoforge-1.0.0")
 }
 
