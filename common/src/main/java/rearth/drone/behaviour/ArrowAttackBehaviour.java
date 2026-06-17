@@ -119,11 +119,10 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
         // shoot arrow
         var stack = new ItemStack(Items.ARROW);
         var offset = targetPos.subtract(shotFrom);
-        var initialVelocity = offset.normalize().scale(2);
 
         var arrowEntity = new Arrow(world, shotFrom.x, shotFrom.y, shotFrom.z, stack, null);
         arrowEntity.setOwner(owner);
-        arrowEntity.setDeltaMovement(initialVelocity);
+        arrowEntity.shoot(offset.x, offset.y, offset.z, 2.0f, 0.0f);
         world.addFreshEntity(arrowEntity);
         world.playSound(null, shotFrom.x, shotFrom.y, shotFrom.z, SoundEvents.DISPENSER_LAUNCH, SoundSource.BLOCKS, 1.0f, 1.0f);
 
