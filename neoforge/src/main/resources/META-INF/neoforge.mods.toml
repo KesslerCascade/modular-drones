@@ -24,14 +24,14 @@ side = "BOTH"
 [[dependencies.drones]]
 modId = "minecraft"
 type = "required"
-versionRange = "[26.1,)"
+versionRange = "[26.2,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.drones]]
 modId = "architectury"
 type = "required"
-versionRange = "[20.0.6,)"
+versionRange = "[20.1,)"
 ordering = "AFTER"
 side = "BOTH"
 
