@@ -95,10 +95,17 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
     public boolean performAttack(double dist, Vec3 shotFrom) {
 
         var world = owner.level();
-        // for small mobs (babies etc.), aim at body center instead of eye to avoid overshooting the hitbox
+        // aim at vertical center of the target's hitbox (works for all mob sizes)
         var entityHeight = target.getBoundingBox().getYsize();
-        var aimBase = entityHeight < 1.0 ? target.position().add(0, entityHeight * 0.5, 0) : target.getEyePosition();
-        var targetPos = aimBase.add(0, dist / 10f, 0); // adjust target slightly up for longer distances to hit
+        var targetCenter = target.position().add(0, entityHeight * 0.66, 0);
+
+        // compute horizontal distance (XZ only) for gravity simulation
+        var dx = targetCenter.x - shotFrom.x;
+        var dz = targetCenter.z - shotFrom.z;
+        var horizontalDist = (float) Math.sqrt(dx * dx + dz * dz);
+
+        // apply physics-accurate upward correction to compensate for gravity drop
+        var targetPos = targetCenter.add(0, computeGravityCompensation(horizontalDist), 0);
 
         // abort if drone no longer has LOS to target (check both actual entity pos and adjusted aim pos)
         var losContextAdjusted = new ClipContext(drone.currentPosition, targetPos, ClipContext.Block.COLLIDER,
@@ -111,7 +118,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
         // point to bracket the arc)
         var ownerBox = owner.getBoundingBox().inflate(0.3);
         var aimDir = targetPos.subtract(shotFrom).normalize();
-        var landDir = target.getEyePosition().subtract(shotFrom).normalize();
+        var landDir = targetCenter.subtract(shotFrom).normalize();
         if (ownerBox.clip(shotFrom, shotFrom.add(aimDir.scale(dist + 5))).isPresent()
                 || ownerBox.clip(shotFrom, shotFrom.add(landDir.scale(dist + 5))).isPresent())
             return false;
@@ -133,12 +140,23 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
 
         // particle
         if (owner.level() instanceof ServerLevel serverWorld) {
-            var forward = target.getEyePosition().subtract(drone.currentPosition).normalize();
+            var forward = targetCenter.subtract(drone.currentPosition).normalize();
             var particleStart = drone.currentPosition.add(forward.scale(0.3f));
             serverWorld.sendParticles(ParticleTypes.SMALL_GUST, particleStart.x, particleStart.y, particleStart.z, 1, forward.x, forward.y, forward.z, 0.2f);
         }
 
         return true;
+    }
+
+    // Closed-form gravity compensation derived from AbstractArrow physics (drag 0.99, gravity 0.05, initial vx=2).
+    // vx_n = 2*0.99^n, vy_n = 5*0.99^n - 5
+    // x_N = 200*(1-0.99^N)
+    // y_N = 2.5*d - 5*N
+    static float computeGravityCompensation(float d) {
+        if (d <= 0) return 0;
+        if (d >= 198) d = 198; // arrow terminal range ~200 units; clamp to avoid log(<=0)
+        float y = 2.5f * d - 5.0f * (float) Math.log(1.0 - d / 200.0) / (float) Math.log(0.99);
+        return -y;
     }
 
     public int getAttackCooldown() {
