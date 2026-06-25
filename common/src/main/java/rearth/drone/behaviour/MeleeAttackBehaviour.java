@@ -165,7 +165,7 @@ public class MeleeAttackBehaviour implements DroneBehaviour {
             targets.sort(Comparator.comparingDouble((entity) -> entity.distanceToSqr(drone.currentPosition)));
             targets = targets.stream()
                     .filter(target -> target.isAlive() && !target.isRemoved() && target instanceof Enemy)
-                    .filter(target -> !(target instanceof net.minecraft.world.entity.monster.EnderMan enderman) || enderman.isCreepy())
+                    .filter(target -> Helpers.isValidAttackTarget(target, false))
                     .filter(target -> Helpers.getDronePath(world, drone.currentPosition, target.getEyePosition()).isReachable())
                     .toList();
 
