@@ -11,6 +11,18 @@ A version-by-version history of notable changes since this fork began (Buddy Dro
 the original mod; this fork's history starts at 1.1.1). For a full summary of how this fork differs from the
 original mod overall, see [Changes from the Original Mod](changes.html).
 
+## 1.3.2
+
+- Drones no longer attack piglins or zombie piglins that are currently passive. They will engage them once they become
+  hostile, just like Endermen.
+
+## 1.3.1
+
+*Released for Minecraft 1.21.11 and 26.1.2 only, as the underlying bugs are related to Minecraft changes in those versions.*
+
+- Fixed arrows frequently glancing off or passing through the target's hitbox without registering a hit.
+- Fixed arrows sometimes launching in the wrong direction due to incorrect initial orientation when spawned.
+
 ## 1.3.0
 
 ### Ion Thruster visual rework
