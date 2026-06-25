@@ -3,6 +3,10 @@ package rearth.util;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.NeutralMob;
+import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.entity.monster.piglin.Piglin;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
@@ -138,6 +142,21 @@ public class Helpers {
         var context = new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, CollisionContext.empty());
         var result = world.clip(context);
         return result.getType() == HitResult.Type.MISS;
+    }
+
+    public static boolean isValidAttackTarget(LivingEntity target, boolean isProjectile) {
+        if (target instanceof EnderMan enderman) {
+            // Endermen teleport away from arrows; for melee/beam, only engage if already aggro'd
+            return !isProjectile && enderman.isCreepy();
+        }
+        if (target instanceof NeutralMob neutral) {
+            return neutral.isAngry();
+        }
+        if (target instanceof Piglin piglin) {
+            // Piglins don't implement NeutralMob; PiglinAi sets isAggressive() from ATTACK_TARGET brain memory each tick
+            return piglin.isAggressive();
+        }
+        return true;
     }
 
     public static boolean isPositionAvailable(Level world, Vec3 pos, Vec3 from) {

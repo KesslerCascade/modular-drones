@@ -204,8 +204,7 @@ public class ArrowAttackBehaviour extends PlayerSwarmBehaviour {
             targets.sort(Comparator.comparingDouble((entity) -> entity.distanceToSqr(playerHead)));
             targets = targets.stream()
                     .filter(target -> target.isAlive() && !target.isRemoved() && target instanceof Enemy)
-                    .filter(target -> !(target instanceof net.minecraft.world.entity.monster.EnderMan enderman)
-                            || (!shootsProjectile() && enderman.isCreepy()))
+                    .filter(target -> Helpers.isValidAttackTarget(target, shootsProjectile()))
                     .filter(target -> hasLos(world, drone.currentPosition, target))
                     .toList();
 
